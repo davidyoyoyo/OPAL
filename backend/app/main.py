@@ -142,7 +142,7 @@ async def research(request: ResearchRequest) -> dict:
                     "passage": str(item.get("evidence_text") or item.get("summary") or "")[:2500],
                     "evidence_level": item.get("evidence_level"),
                 }
-                for item in findings[:12]
+                for item in findings[:20]
             ]
             synthesis = await ai_service.synthesize_evidence(question, source_passages)
             result["evidence_synthesis"] = _validated_synthesis(synthesis, findings)
