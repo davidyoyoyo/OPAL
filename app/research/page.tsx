@@ -272,6 +272,7 @@ export default function ResearchPage() {
                     ))}
                   </article>
                 </>
+              ) : (
                 <div className="findings-empty">
                   <strong>No usable abstracts were returned for these matching studies.</strong>
                   <p>OPAL found study records, but their Crossref entries did not include enough abstract text to extract evidence. This is different from finding no research. Open the study records below to inspect available metadata. Survey percentages and measured public-opinion results require dedicated survey sources and are not inferred from publication metadata.</p>
