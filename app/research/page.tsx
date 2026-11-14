@@ -33,7 +33,7 @@ type ResearchResult = {
   unique_studies?: number;
   candidate_records_screened?: number;
   relevant_source_records?: number;
-  findings?: { title: string; summary: string; source_title?: string; source_url?: string }[];
+  findings?: { id: string; title: string; evidence_text: string; source_title: string; source_url: string; publication_year: number | null; evidence_type: string; evidence_level: string; interpretation: string }[];\n  abstracts_with_evidence?: number;
 };
 
 const API_URL = process.env.NEXT_PUBLIC_OPAL_API_URL ?? "http://127.0.0.1:8000";
@@ -153,20 +153,33 @@ export default function ResearchPage() {
                 <span className="findings-count">{result.findings?.length ?? 0} extracted findings</span>
               </div>
               {result.findings && result.findings.length > 0 ? (
-                <div className="findings-list">
-                  {result.findings.map((finding, index) => (
-                    <article className="finding-card" key={index}>
-                      <h4>{finding.title}</h4>
-                      <p>{finding.summary}</p>
-                      {finding.source_title && <span>{finding.source_title}</span>}
-                      {finding.source_url && <a href={finding.source_url} target="_blank" rel="noreferrer">View source <ExternalLink size={12} /></a>}
-                    </article>
-                  ))}
-                </div>
+                <>
+                  <p className="findings-intro">
+                    OPAL found {result.findings.length} source-backed abstract passage{result.findings.length === 1 ? "" : "s"} in the matching studies below. These are extracted passages, not invented summaries or population-wide survey estimates.
+                  </p>
+                  <div className="findings-list">
+                    {result.findings.map((finding) => (
+                      <article className="finding-card" key={finding.id}>
+                        <div className="finding-card-topline">
+                          <span className="finding-type">SUPPORTING RESEARCH · ABSTRACT</span>
+                          {finding.publication_year && <span>{finding.publication_year}</span>}
+                        </div>
+                        <h4>{finding.source_title}</h4>
+                        <blockquote className="finding-excerpt">{finding.evidence_text}</blockquote>
+                        <p className="finding-limitation">{finding.interpretation}</p>
+                        {finding.source_url && (
+                          <a href={finding.source_url} target="_blank" rel="noreferrer">
+                            Open original source <ExternalLink size={12} />
+                          </a>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="findings-empty">
-                  <strong>No findings have been extracted yet.</strong>
-                  <p>The current connector retrieves scholarly records and abstracts. It does not yet extract survey results, public-opinion measurements, or validated conclusions. OPAL will show findings here once a source provides evidence that can be traced to its original study.</p>
+                  <strong>No usable abstracts were returned for these matching studies.</strong>
+                  <p>OPAL found study records, but their Crossref entries did not include enough abstract text to extract evidence passages. This is different from finding no research. Open the study records below to inspect available metadata. Survey percentages and measured public-opinion results require dedicated survey sources and are not inferred from publication metadata.</p>
                 </div>
               )}
             </section>
