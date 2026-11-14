@@ -69,5 +69,15 @@ def test_synthesis_schema_requires_source_ids_for_each_key_point():
     with pytest.raises(ValidationError):
         EvidenceSynthesis(
             overview="The studies examine public transport satisfaction.",
+            overview_source_ids=["study-1"],
             key_points=[{"text": "Reliable service was linked to higher satisfaction."}],
+        )
+
+
+
+def test_synthesis_schema_requires_sources_for_overview():
+    with pytest.raises(ValidationError):
+        EvidenceSynthesis(
+            overview="The studies collectively report higher satisfaction with reliable services.",
+            key_points=[],
         )
