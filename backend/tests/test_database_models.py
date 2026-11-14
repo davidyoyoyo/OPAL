@@ -32,3 +32,15 @@ def test_waves_are_distinct_from_study_version_history():
 def test_question_denominator_and_both_percentage_values_are_supported():
     columns = Base.metadata.tables["response_distributions"].c
     assert {"base_n", "reported_percentage", "calculated_percentage", "response_count"}.issubset(columns.keys())
+
+
+
+def test_metadata_can_create_schema_on_sqlite_for_model_smoke_test():
+    from sqlalchemy import create_engine, inspect
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    names = set(inspect(engine).get_table_names())
+    assert "research_works" in names
+    assert "response_distributions" in names
+    assert "data_provenance" in names
