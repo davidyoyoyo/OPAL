@@ -16,10 +16,9 @@ class CloudflareWorkersAIProvider(StructuredAIProvider):
     async def generate_structured(self, *, system_prompt: str, user_prompt: str, output_model: type[T]) -> T:
         url = (
             f"https://api.cloudflare.com/client/v4/accounts/{self.account_id}"
-            f"/ai/v1/chat/completions"
+            f"/ai/run/{self.model}"
         )
         payload = {
-            "model": self.model,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
@@ -37,7 +36,12 @@ class CloudflareWorkersAIProvider(StructuredAIProvider):
                 )
                 response.raise_for_status()
                 body = response.json()
-            content = body["choices"][0]["message"]["content"]
+            result = body.get("result", {})
+            content = result.get("response") if isinstance(result, dict) else None
+            if content is None and isinstance(result, dict):
+                choices = result.get("choices", [])
+                if choices:
+                    content = choices[0].get("message", {}).get("content")
             if isinstance(content, list):
                 content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
             if not isinstance(content, str) or not content.strip():
