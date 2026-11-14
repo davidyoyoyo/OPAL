@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import {
   ArrowDownToLine,
@@ -23,7 +23,6 @@ import {
   SlidersHorizontal,
   Table2,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 
 type EvidenceRow = {
   id: number;
@@ -52,8 +51,11 @@ const evidenceColors: Record<EvidenceRow["evidence"], string> = {
 };
 
 export default function ResearchPage() {
-  const searchParams = useSearchParams();
-  const question = searchParams.get("q") || "Should the working week be four days?";
+  const [question, setQuestion] = useState("Should the working week be four days?");
+  useEffect(() => {
+    const requestedQuestion = new URLSearchParams(window.location.search).get("q");
+    if (requestedQuestion) setQuestion(requestedQuestion);
+  }, []);
   const [activeTab, setActiveTab] = useState<"overview" | "evidence">("overview");
   const [evidenceFilter, setEvidenceFilter] = useState("All evidence");
   const [search, setSearch] = useState("");
