@@ -5,19 +5,6 @@ import httpx
 from app.sources.base import RawSourceItem, SourceAdapter, SourceQuery
 
 
-def _reconstruct_abstract(index: dict | None) -> str | None:
-    """Rebuild OpenAlex's inverted abstract index without inventing text."""
-    if not index:
-        return None
-    positions: dict[int, str] = {}
-    for word, offsets in index.items():
-        for offset in offsets:
-            positions[offset] = word
-    if not positions:
-        return None
-    return " ".join(positions[position] for position in sorted(positions))
-
-
 class OpenAlexAdapter(SourceAdapter):
     """Search OpenAlex's CC0 scholarly metadata API."""
 
