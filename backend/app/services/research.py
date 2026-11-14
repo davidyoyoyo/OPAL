@@ -36,7 +36,7 @@ _OPINION_WORDS = {"like", "likes", "liked", "liking", "love", "loves", "loved", 
 _SURVEY_SIGNALS = {"survey", "poll", "respondent", "respondents", "participant", "participants", "consumer", "consumers", "questionnaire", "sample"}
 _PREVALENCE_MEASURE_SIGNALS = {
     "percentage", "percent", "proportion", "prevalence", "majority", "minority",
-    "distribution", "frequency", "count", "number", "share", "reported",
+    "distribution", "frequency", "count", "number", "share", "majority", "minority", "most", "half",
 }
 _EXPLANATORY_SIGNALS = {
     "sensory", "taste", "flavor", "flavour", "texture", "sweetness", "aroma",
@@ -94,7 +94,7 @@ def classify_relevance(query: str, item: RawSourceItem) -> str | None:
         }
         if not topic_terms:
             return None
-        topic_match = bool(_topic_aliases(topic_terms) & all_terms)
+        topic_match = len(_topic_aliases(topic_terms) & all_terms) >= min(2, len(topic_terms))
         if not topic_match:
             return None
 
