@@ -8,6 +8,8 @@ AI interprets language and structures evidence. It does not calculate survey sta
 
 - `ResearchPlan` structures a visitor's question into intent, topic, population, geography, period, requested measures and evidence types.
 - `EvidenceInterpretation` classifies source passages as survey results, qualitative opinions, research findings, contextual information, irrelevant or unclear. It separates stance from sentiment and records missing information.
+- `EvidenceSynthesis` creates one concise cross-study overview with up to five distinct key points and explicit source IDs. The API validates every cited source ID against retrieved records before returning it.
+- The research endpoint makes one bounded synthesis call for up to 20 relevant abstract summaries, rather than separately interpreting five individual findings.
 - `StructuredAIProvider` keeps model vendors replaceable.
 - `CloudflareWorkersAIProvider` is the first provider adapter. It uses the Cloudflare REST API and expects credentials/model ID from environment variables only.
 - If AI is not configured, the service returns `None`; it does not label a heuristic result as AI output.
@@ -35,4 +37,4 @@ No credentials or model choice are committed. AI is inactive until configured. C
 
 ## Integration sequence
 
-This module is the first AI-processing foundation. The next step is to connect question interpretation to the research planner and evidence interpretation to provider-specific extraction, with saved-response tests and explicit provenance. Do not use AI output as a survey result without source-backed validation.
+The research endpoint uses AI only to interpret the question and synthesize retrieved abstract passages. It does not calculate survey distributions. If AI is unavailable, a clearly labelled extractive fallback selects result-oriented passages across the abstracts; it is not presented as an AI conclusion or a pooled finding. The next step is to connect the planner to compatible survey repositories and numerical retrieval, with deterministic statistics and explicit provenance. Do not use AI output as a survey result without source-backed validation.
