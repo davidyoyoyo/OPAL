@@ -52,10 +52,10 @@ def build_extractive_synthesis(
     This is deliberately not presented as a pooled or causal conclusion.
     """
     prevalence_question = bool(re.search(
-        r"\\b(how many|what percentage|what percent|how common|how widespread|what share|what proportion)\\b",
+        r"\b(how many|what percentage|what percent|how common|how widespread|what share|what proportion)\b",
         query, re.I
     )) or bool(re.search(
-        r"\\b(people|consumers|adults|respondents)\\b.*\\b(like|love|prefer|support|favor|favour|enjoy)\\b",
+        r"\b(people|consumers|adults|respondents)\b.*\b(like|love|prefer|support|favor|favour|enjoy)\b",
         query, re.I
     ))
     # A prevalence question is not answered by generic product research. The
