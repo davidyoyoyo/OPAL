@@ -183,7 +183,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="trust-strip" id="methodology">
+      <section className="trust-strip">
         <div className="trust-intro">BUILT FOR BETTER QUESTIONS</div>
         <div className="trust-item"><BarChart3 size={17} /><span>Evidence, not guesswork</span></div>
         <div className="trust-item"><Database size={17} /><span>Traceable sources</span></div>
@@ -217,6 +217,32 @@ export default function Home() {
             <p>Explore structured results, inspect sources and export your spreadsheet. Then you're free to go.</p>
           </article>
         </div>
+      </section>
+
+      <section className="methodology-section" id="methodology">
+        <div className="methodology-copy">
+          <div className="section-kicker">HOW WE HANDLE THE EVIDENCE</div>
+          <h2>Clear about what the data <em>can tell us.</em></h2>
+          <p>Not every source measures opinion in the same way. OPAL keeps different kinds of evidence separate, so a survey result is never presented as if it came from a representative sample of online comments.</p>
+        </div>
+        <div className="methodology-grid">
+          <article className="methodology-card">
+            <span className="methodology-index">01</span>
+            <h3>Measured opinions</h3>
+            <p>Survey results stay tied to their question wording, sample, fieldwork dates and methodology. Percentages use the correct respondent base.</p>
+          </article>
+          <article className="methodology-card">
+            <span className="methodology-index">02</span>
+            <h3>Expressed opinions</h3>
+            <p>Public discussions show what people are saying and the arguments they make. They are not treated as a representative measure of public opinion.</p>
+          </article>
+          <article className="methodology-card">
+            <span className="methodology-index">03</span>
+            <h3>Supporting research</h3>
+            <p>Academic papers and reports add context. OPAL distinguishes background evidence from sources that directly measure people's views.</p>
+          </article>
+        </div>
+        <p className="methodology-note"><ShieldCheck size={15} /> Every finding should be traceable to its source, and uncertainty should be visible rather than hidden.</p>
       </section>
 
       <footer className="site-footer">
