@@ -6,7 +6,7 @@ OPAL is an account-free opinion research platform. A visitor asks a question, OP
 
 ## Current stage
 
-The frontend is connected to the first version of the Python research API. The API currently searches Crossref's public scholarly metadata service. It returns publication records, not validated opinion percentages. Survey-specific sources, extraction, quality checks and statistics will be added in later stages.
+The frontend is connected to the Python research API. Scholarly discovery currently uses Crossref; the Eurostat connector discovers statistical datasets but does not yet retrieve opinion-survey distributions. OPAL therefore does not display measured public-opinion percentages yet. A separate survey-source registry and strict question-level survey schema are now in place, but no survey repository is registered until its access and reuse terms are suitable.
 
 ## Technology
 
@@ -50,7 +50,7 @@ The website calls the local API by default. To use another API URL, copy `.env.e
 
 ## Adding a source
 
-Each provider gets its own adapter under `backend/app/sources/providers/`. It implements the shared `SourceAdapter` interface and maps provider-specific results into OPAL's `RawSourceItem` model. The engine then handles orchestration and identity resolution without needing provider-specific code.
+Scholarly providers get adapters under `backend/app/sources/providers/` and implement `SourceAdapter`. Survey repositories use a separate `SurveySourceAdapter` contract and `SurveySourceRegistry`, returning validated `SurveyQuestionResult` records. This keeps bibliographic discovery separate from measured opinion data.
 
 See [the engine guide](backend/README.md) and [the architecture notes](docs/ENGINE_ARCHITECTURE.md).
 
