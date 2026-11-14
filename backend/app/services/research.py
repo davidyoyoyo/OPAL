@@ -48,6 +48,30 @@ _EDUCATION_TERMS = {"ivy", "league", "university", "universities", "college", "c
 _DECISION_TERMS = {"choice", "decision", "factor", "factors", "important", "importance", "criteria", "select", "selection"}
 
 
+def _topic_aliases(terms: set[str]) -> set[str]:
+    """Expand common inflections and a small set of safe topic synonyms."""
+    expanded = set(terms)
+    for term in terms:
+        if len(term) > 4 and term.endswith("ies"):
+            expanded.add(term[:-3] + "y")
+        elif len(term) > 3 and term.endswith("s") and not term.endswith("ss"):
+            expanded.add(term[:-1])
+
+    aliases = {
+        "airplane": {"aircraft", "aviation"},
+        "airplanes": {"aircraft", "aviation"},
+        "aircraft": {"airplane", "aviation"},
+        "aviation": {"airplane", "aircraft"},
+        "attitude": {"opinion", "view"},
+        "attitudes": {"opinion", "view"},
+        "opinion": {"attitude", "view"},
+        "opinions": {"attitude", "view"},
+    }
+    for term in tuple(expanded):
+        expanded.update(aliases.get(term, set()))
+    return expanded
+
+
 def _normalized_terms(text: str) -> set[str]:
     terms = _terms(text)
     normalized = set(terms)
