@@ -33,7 +33,8 @@ type ResearchResult = {
   unique_studies?: number;
   candidate_records_screened?: number;
   relevant_source_records?: number;
-  findings?: { id: string; title: string; evidence_text: string; source_title: string; source_url: string; publication_year: number | null; evidence_type: string; evidence_level: string; interpretation: string }[];\n  abstracts_with_evidence?: number;
+  findings?: { id: string; title: string; evidence_text: string; source_title: string; source_url: string; publication_year: number | null; evidence_type: string; evidence_level: string; interpretation: string }[];
+  abstracts_with_evidence?: number;
 };
 
 const API_URL = process.env.NEXT_PUBLIC_OPAL_API_URL ?? "http://127.0.0.1:8000";
