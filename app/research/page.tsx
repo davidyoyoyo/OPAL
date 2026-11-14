@@ -51,6 +51,40 @@ type ResearchResult = {
   abstracts_with_evidence?: number;
 };
 
+
+type EvidencePoint = {
+  text: string;
+  source_title: string;
+  source_url: string;
+  publication_year: number | null;
+};
+
+function buildEvidencePoints(findings: NonNullable<ResearchResult["findings"]>): EvidencePoint[] {
+  const seen = new Set<string>();
+  const points: EvidencePoint[] = [];
+
+  for (const finding of findings) {
+    const sentences = (finding.summary ?? finding.evidence_text)
+      .split(/(?<=[.!?])\\s+(?=[A-Z0-9])/)
+      .map((sentence) => sentence.trim())
+      .filter((sentence) => sentence.length >= 35);
+
+    for (const sentence of sentences) {
+      const key = sentence.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      points.push({
+        text: sentence,
+        source_title: finding.source_title,
+        source_url: finding.source_url,
+        publication_year: finding.publication_year,
+      });
+    }
+  }
+
+  return points.slice(0, 5);
+}
+
 const API_URL = process.env.NEXT_PUBLIC_OPAL_API_URL ?? "http://127.0.0.1:8000";
 
 export default function ResearchPage() {
@@ -58,7 +92,6 @@ export default function ResearchPage() {
   const [result, setResult] = useState<ResearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [visibleFindings, setVisibleFindings] = useState(3);
   const [visibleStudies, setVisibleStudies] = useState(3);
   const [visibleMethodology, setVisibleMethodology] = useState(3);
 
@@ -69,7 +102,6 @@ export default function ResearchPage() {
     setLoading(true);
     setError("");
     setResult(null);
-    setVisibleFindings(3);
     setVisibleStudies(3);
     setVisibleMethodology(3);
 
@@ -208,48 +240,35 @@ export default function ResearchPage() {
             <section className="findings-section">
               <div className="findings-heading">
                 <div>
-                  <div className="live-kicker">RESEARCH FINDINGS</div>
+                  <div className="live-kicker">RESEARCH SYNTHESIS</div>
                   <h3>What the evidence tells us</h3>
                 </div>
-                <span className="findings-count">{result.findings?.length ?? 0} abstract passages</span>
+                <span className="findings-count">One evidence brief</span>
               </div>
               {result.findings && result.findings.length > 0 ? (
                 <>
                   <p className="findings-intro">
-                    These are concise summaries of what the matching publications report in their abstracts. Each is linked to its source; they are not independently verified survey estimates.
+                    A single brief bringing together the clearest points reported in the matching study abstracts. Each point links to its source; these are supporting research findings, not population-wide opinion estimates.
                   </p>
-                  <div className="findings-list">
-                    {result.findings.slice(0, visibleFindings).map((finding) => (
-                      <article className="finding-card" key={finding.id}>
-                        <div className="finding-card-topline">
-                          <span className="finding-type">ABSTRACT-BASED SUMMARY</span>
-                          {finding.publication_year && <span>{finding.publication_year}</span>}
-                        </div>
-                        <h4>{finding.source_title}</h4>
-                        <p className="finding-excerpt">{finding.summary ?? finding.evidence_text}</p>
-                        <p className="finding-limitation">{finding.interpretation}</p>
-                        {finding.source_url && (
-                          <a href={finding.source_url} target="_blank" rel="noreferrer">
-                            Open original source <ExternalLink size={12} />
+                  <article className="evidence-brief-card">
+                    <div className="evidence-brief-label">KEY POINTS FROM THE AVAILABLE ABSTRACTS</div>
+                    <ul className="evidence-brief-list">
+                      {buildEvidencePoints(result.findings).map((point, index) => (
+                        <li key={`${point.source_url}-${index}`}>
+                          <p>{point.text}</p>
+                          <a href={point.source_url} target="_blank" rel="noreferrer">
+                            {point.source_title}{point.publication_year ? ` · ${point.publication_year}` : ""} <ExternalLink size={12} />
                           </a>
-                        )}
-                      </article>
-                    ))}
-                  </div>
-                  {result.findings.length > 3 && visibleFindings < result.findings.length && (
-                    <div className="reveal-controls">
-                      {visibleFindings === 3 ? (
-                        <button type="button" onClick={() => setVisibleFindings(5)}>Show more findings</button>
-                      ) : (
-                        <button type="button" onClick={() => setVisibleFindings(result.findings!.length)}>Show all {result.findings.length}</button>
-                      )}
-                    </div>
-                  )}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="finding-limitation">This brief is limited to information present in the abstracts returned by Crossref. It does not claim that the listed factors are ranked or universally important.</p>
+                  </article>
                 </>
               ) : (
                 <div className="findings-empty">
                   <strong>No usable abstracts were returned for these matching studies.</strong>
-                  <p>OPAL found study records, but their Crossref entries did not include enough abstract text to extract evidence passages. This is different from finding no research. Open the study records below to inspect available metadata. Survey percentages and measured public-opinion results require dedicated survey sources and are not inferred from publication metadata.</p>
+                  <p>OPAL found study records, but their Crossref entries did not include enough abstract text to extract evidence. This is different from finding no research. Open the study records below to inspect available metadata. Survey percentages and measured public-opinion results require dedicated survey sources and are not inferred from publication metadata.</p>
                 </div>
               )}
             </section>
