@@ -65,7 +65,7 @@ function buildEvidencePoints(findings: NonNullable<ResearchResult["findings"]>):
 
   for (const finding of findings) {
     const sentences = (finding.summary ?? finding.evidence_text)
-      .split(/(?<=[.!?])\\s+(?=[A-Z0-9])/)
+      .split(/(?<=[.!?])\s+(?=[A-Z0-9])/)
       .map((sentence) => sentence.trim())
       .filter((sentence) => sentence.length >= 35);
 
