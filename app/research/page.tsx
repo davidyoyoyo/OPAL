@@ -31,6 +31,9 @@ type ResearchResult = {
   source_failures?: { source: string; error: string }[];
   raw_records_found?: number;
   unique_studies?: number;
+  candidate_records_screened?: number;
+  relevant_source_records?: number;
+  findings?: { title: string; summary: string; source_title?: string; source_url?: string }[];
 };
 
 const API_URL = process.env.NEXT_PUBLIC_OPAL_API_URL ?? "http://127.0.0.1:8000";
@@ -135,11 +138,38 @@ export default function ResearchPage() {
             <div className="results-heading">
               <div>
                 <div className="live-kicker">SEARCH RESULTS</div>
-                <h2>{result.unique_studies ?? result.studies.length} study records</h2>
-                <p>{result.raw_records_found ?? result.studies.length} source records retrieved for “{result.query}”.</p>
+                <h2>{result.unique_studies ?? result.studies.length} relevant studies</h2>
+                <p>{result.unique_studies ?? result.studies.length} relevant studies retained from {result.candidate_records_screened ?? result.raw_records_found ?? result.studies.length} records screened for “{result.query}”.</p>
               </div>
               <div className="source-count"><Database size={15} /> {result.sources_searched.length} source connector{result.sources_searched.length === 1 ? "" : "s"}</div>
             </div>
+
+            <section className="findings-section">
+              <div className="findings-heading">
+                <div>
+                  <div className="live-kicker">RESEARCH FINDINGS</div>
+                  <h3>What the evidence tells us</h3>
+                </div>
+                <span className="findings-count">{result.findings?.length ?? 0} extracted findings</span>
+              </div>
+              {result.findings && result.findings.length > 0 ? (
+                <div className="findings-list">
+                  {result.findings.map((finding, index) => (
+                    <article className="finding-card" key={index}>
+                      <h4>{finding.title}</h4>
+                      <p>{finding.summary}</p>
+                      {finding.source_title && <span>{finding.source_title}</span>}
+                      {finding.source_url && <a href={finding.source_url} target="_blank" rel="noreferrer">View source <ExternalLink size={12} /></a>}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="findings-empty">
+                  <strong>No findings have been extracted yet.</strong>
+                  <p>The current connector retrieves scholarly records and abstracts. It does not yet extract survey results, public-opinion measurements, or validated conclusions. OPAL will show findings here once a source provides evidence that can be traced to its original study.</p>
+                </div>
+              )}
+            </section>
 
             {result.message && <div className="live-empty">{result.message}</div>}
             {result.studies.length === 0 && !result.message && <div className="live-empty">No publication records were returned. Try a broader topic or different wording.</div>}
