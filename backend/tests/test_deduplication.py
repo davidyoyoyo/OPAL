@@ -1,6 +1,6 @@
 from app.deduplication.identity import compare_records, normalize_doi, normalize_title
 from app.sources.base import RawSourceItem
-from app.services.research import group_source_records
+from app.services.research import find_duplicate_candidates, group_source_records
 
 
 def item(provider: str, url: str, title: str, doi: str | None = None) -> RawSourceItem:
@@ -39,3 +39,4 @@ def test_similar_titles_are_candidates_not_automatically_merged():
     assert result["confidence"] > 0
     assert result["same_study"] is False
     assert len(group_source_records([left, right])) == 2
+    assert len(find_duplicate_candidates([left, right])) == 1
