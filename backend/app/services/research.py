@@ -29,26 +29,70 @@ def _terms(text: str) -> set[str]:
     }
 
 
+_CHOICE_WORDS = {"choose", "choosing", "choice", "choices", "select", "selecting", "selection", "selections"}
+_OPINION_WORDS = {"like", "likes", "love", "prefer", "prefers", "preference", "preferences", "support", "favor", "favour", "attitude", "attitudes", "opinion", "opinions", "feel", "feeling"}
+_SURVEY_SIGNALS = {"survey", "poll", "respondent", "respondents", "participant", "participants", "preference", "preferences", "attitude", "attitudes", "consumer", "consumers", "support", "favor", "favour"}
+_EDUCATION_TERMS = {"ivy", "league", "university", "universities", "college", "colleges", "student", "students", "education", "admission", "admissions", "campus", "institution", "institutions", "higher"}
+_DECISION_TERMS = {"choice", "decision", "factor", "factors", "important", "importance", "criteria", "select", "selection"}
+
+
+def _normalized_terms(text: str) -> set[str]:
+    terms = _terms(text)
+    normalized = set(terms)
+    if terms & _CHOICE_WORDS:
+        normalized.add("choice")
+    if terms & {"matters", "matter", "important", "importance"}:
+        normalized.add("importance")
+    return normalized
+
+
 def relevance_score(query: str, item: RawSourceItem) -> float:
-    """A transparent lexical relevance estimate; it is not a semantic judgement."""
-    query_terms = _terms(query)
+    """A conservative lexical score; shared generic wording is not enough."""
+    query_terms = _normalized_terms(query)
     if not query_terms:
         return 1.0
-    title_terms = _terms(item.title)
-    abstract_terms = _terms(item.abstract or "")
+    title_terms = _normalized_terms(item.title)
+    abstract_terms = _normalized_terms(item.abstract or "")
     title_coverage = len(query_terms & title_terms) / len(query_terms)
     abstract_coverage = len(query_terms & abstract_terms) / len(query_terms)
-    return (0.75 * title_coverage) + (0.25 * abstract_coverage)
+    return (0.8 * title_coverage) + (0.2 * abstract_coverage)
 
 
 def is_relevant(query: str, item: RawSourceItem) -> bool:
-    query_terms = _terms(query)
+    query_terms = _normalized_terms(query)
     if not query_terms:
-        return True
-    title_hits = len(query_terms & _terms(item.title))
-    abstract_hits = len(query_terms & _terms(item.abstract or ""))
+        return False
+
+    title_terms = _normalized_terms(item.title)
+    abstract_terms = _normalized_terms(item.abstract or "")
+    all_terms = title_terms | abstract_terms
+    title_hits = len(query_terms & title_terms)
+    abstract_hits = len(query_terms & abstract_terms)
     score = relevance_score(query, item)
-    return score >= 0.16 and (title_hits >= 1 or abstract_hits >= 2)
+
+    # Prevalence / preference questions need evidence about people's views or
+    # measured behaviour, not merely a paper that happens to mention the object.
+    prevalence_question = bool(
+        re.search(r"\\b(how many|what percentage|what percent|how common|do people|people .*\\b(like|prefer|support|favor|favour)\\b|\\b(like|prefer|support|favor|favour)\\b)\\b", query, re.I)
+    )
+    if prevalence_question:
+        topic_terms = query_terms - _OPINION_WORDS - {"people", "person"}
+        topic_hits = len(topic_terms & all_terms)
+        survey_signal = bool(_SURVEY_SIGNALS & all_terms)
+        return topic_hits >= 2 and survey_signal and score >= 0.12
+
+    # University-choice questions need both an education-domain match and a
+    # decision/selection match. "Choosing" or "matters" alone cannot qualify.
+    education_question = bool(re.search(r"\\b(ivy league|university|universit(y|ies)|college|higher education)\\b", query, re.I))
+    decision_question = bool(re.search(r"\\b(choos(e|ing)|choice|select(ing|ion)?|decision|what matters|important|factors?)\\b", query, re.I))
+    if education_question and decision_question:
+        domain_match = bool(_EDUCATION_TERMS & all_terms)
+        decision_match = bool(_DECISION_TERMS & all_terms)
+        return domain_match and decision_match and (title_hits >= 1 or abstract_hits >= 3)
+
+    # For other questions, demand multiple independent topic matches. A single
+    # shared word such as "ice cream" or "patients choosing" is insufficient.
+    return score >= 0.28 and (title_hits >= 2 or (title_hits >= 1 and abstract_hits >= 3))
 
 
 def _plain_abstract(value: str) -> str:
@@ -180,6 +224,7 @@ async def run_research(query: str, registry: SourceRegistry) -> dict:
             "message": "The engine is ready, but no source connectors are configured yet.",
             "studies": [],
             "findings": [],
+            "survey_results": [],
             "duplicate_candidates": [],
             "sources_searched": [],
         }
@@ -208,6 +253,9 @@ async def run_research(query: str, registry: SourceRegistry) -> dict:
         "query": query,
         "studies": [study.model_dump(mode="json") for study in studies],
         "findings": findings,
+        # No survey connector currently supplies validated distributions. Keep
+        # this empty until source adapters return question-level survey data.
+        "survey_results": [],
         "duplicate_candidates": duplicate_candidates,
         "sources_searched": [adapter.name for adapter in adapters],
         "source_failures": failures,
