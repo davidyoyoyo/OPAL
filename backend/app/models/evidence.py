@@ -21,6 +21,7 @@ class StudyRecord(BaseModel):
     title: str
     publication_year: int | None = None
     doi: str | None = None
+    identifiers: dict[str, str] = Field(default_factory=dict)
     authors: list[str] = Field(default_factory=list)
     abstract: str | None = None
     locations: list[SourceLocation] = Field(default_factory=list)
