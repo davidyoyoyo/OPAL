@@ -1,5 +1,4 @@
 import re
-from collections import Counter
 from typing import Any
 
 
@@ -43,7 +42,7 @@ def _sentences(text: str) -> list[str]:
     ]
 
 
-def build_extractivesynthesis(
+def build_extractive_synthesis(
     query: str, findings: list[dict[str, Any]], *, max_points: int = 5
 ) -> dict[str, Any]:
     """Create a transparent, multi-document extractive brief when AI is unavailable.
