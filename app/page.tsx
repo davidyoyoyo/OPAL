@@ -24,13 +24,6 @@ const examples = [
   "How do city residents feel about public transport?",
 ];
 
-const sampleRows = [
-  { label: "Strongly support", value: 42, color: "var(--green)" },
-  { label: "Somewhat support", value: 26, color: "#8DB8A4" },
-  { label: "Neither / unsure", value: 14, color: "#C8D2CC" },
-  { label: "Oppose", value: 18, color: "#D8A49A" },
-];
-
 export default function Home() {
   const router = useRouter();
   const [question, setQuestion] = useState("");
@@ -144,32 +137,22 @@ export default function Home() {
             <p className="sample-description">Illustrative distribution of responses</p>
 
             <div className="chart-area">
-              <div className="chart-summary">
-                <div><strong>68%</strong><span>Support</span></div>
-                <div className="summary-divider" />
-                <div><strong>18%</strong><span>Oppose</span></div>
-                <div className="summary-divider" />
-                <div><strong>14%</strong><span>Unsure</span></div>
-              </div>
-              <div className="bar-list">
-                {sampleRows.map((row) => (
-                  <div className="bar-row" key={row.label}>
-                    <div className="bar-label"><span>{row.label}</span><strong>{row.value}%</strong></div>
-                    <div className="bar-track"><div style={{ width: row.value + "%", background: row.color }} /></div>
-                  </div>
-                ))}
+              <div className="survey-preview-placeholder">
+                <span className="meta-chip">SURVEY DATA NOT CONNECTED</span>
+                <strong>Waiting for original survey responses</strong>
+                <p>OPAL will display percentages only after it retrieves the original question, respondent base and response distribution from a suitable survey source.</p>
               </div>
             </div>
 
             <div className="table-heading">
-              <span><Layers3 size={14} /> EVIDENCE BREAKDOWN</span>
-              <span>4 example rows</span>
+              <span><Layers3 size={14} /> REQUIRED SURVEY FIELDS</span>
+              <span>Shown when verified</span>
             </div>
             <div className="mini-table">
-              <div className="table-row table-head"><span>RESPONSE</span><span>SHARE</span><span>TYPE</span></div>
-              <div className="table-row"><span>Strongly support</span><strong>42%</strong><span className="type-survey">Survey</span></div>
-              <div className="table-row"><span>Somewhat support</span><strong>26%</strong><span className="type-survey">Survey</span></div>
-              <div className="table-row"><span>Neither / unsure</span><strong>14%</strong><span className="type-report">Report</span></div>
+              <div className="table-row table-head"><span>FIELD</span><span>STATUS</span><span>TYPE</span></div>
+              <div className="table-row"><span>Exact question wording</span><strong>Required</strong><span className="type-survey">Survey</span></div>
+              <div className="table-row"><span>Respondent base</span><strong>Required</strong><span className="type-survey">Survey</span></div>
+              <div className="table-row"><span>Response distribution</span><strong>Required</strong><span className="type-survey">Survey</span></div>
             </div>
             <div className="window-footer">
               <span><ShieldCheck size={14} /> Evidence types kept separate</span>
