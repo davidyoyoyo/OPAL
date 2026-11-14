@@ -49,22 +49,27 @@ def _configured_ai_service():
     return service
 
 
-def _validated_synthesis(ai_synthesis, findings: list[dict]) -> dict:
-    """Reject model-generated citations that do not point to retrieved records."""
-    valid_ids = {
-        str(item.get("id") or item.get("source_url") or item.get("source_title") or "")
-        for item in findings
-    }
+def _validated_synthesis(ai_synthesis, source_passages: list[dict]) -> dict:
+    """Reject model-generated citations that do not point to supplied records."""
+    valid_ids = {str(item.get("source_id", "")) for item in source_passages}
     output = ai_synthesis.model_dump()
+    overview_ids = [
+        source_id for source_id in output.get("overview_source_ids", [])
+        if source_id in valid_ids
+    ]
+    if not overview_ids:
+        raise AIInterpretationError("Synthesis overview did not cite a retrieved source.")
     safe_points = []
     for point in output.get("key_points", []):
         source_ids = [source_id for source_id in point.get("source_ids", []) if source_id in valid_ids]
         if source_ids:
             safe_points.append({**point, "source_ids": source_ids})
+    if not safe_points:
+        raise AIInterpretationError("Synthesis did not return any source-backed key points.")
+    output["overview_source_ids"] = overview_ids
     output["key_points"] = safe_points
     output["mode"] = "ai_synthesis"
     return output
-
 
 @app.get("/health")
 async def health() -> dict[str, str]:
@@ -145,7 +150,7 @@ async def research(request: ResearchRequest) -> dict:
                 for item in findings[:20]
             ]
             synthesis = await ai_service.synthesize_evidence(question, source_passages)
-            result["evidence_synthesis"] = _validated_synthesis(synthesis, findings)
+            result["evidence_synthesis"] = _validated_synthesis(synthesis, source_passages)
             result["ai_processing"]["synthesis"] = "completed"
         else:
             result["ai_processing"]["synthesis"] = "no_abstracts_to_synthesize"
