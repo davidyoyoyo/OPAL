@@ -1,8 +1,9 @@
 import os
 
 from app.ai.base import StructuredAIProvider
-from app.ai.prompts import evidence_prompt, research_plan_prompt
+from app.ai.prompts import evidence_prompt, evidence_synthesis_prompt, research_plan_prompt
 from app.ai.schemas import EvidenceInterpretation, ResearchPlan
+from app.ai.synthesis import EvidenceSynthesis
 
 
 class AIInterpretationService:
@@ -19,6 +20,14 @@ class AIInterpretationService:
         system, user = evidence_prompt(text, source_context or {}, EvidenceInterpretation)
         return await self.provider.generate_structured(
             system_prompt=system, user_prompt=user, output_model=EvidenceInterpretation
+        )
+
+    async def synthesize_evidence(
+        self, question: str, source_passages: list[dict]
+    ) -> EvidenceSynthesis:
+        system, user = evidence_synthesis_prompt(question, source_passages, EvidenceSynthesis)
+        return await self.provider.generate_structured(
+            system_prompt=system, user_prompt=user, output_model=EvidenceSynthesis
         )
 
 
