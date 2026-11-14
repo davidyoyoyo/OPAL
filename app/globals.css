@@ -302,3 +302,34 @@ button { cursor: pointer; }
   .small-export { margin-left: 0; }
   .workspace-footer { flex-direction: column; }
 }
+
+
+/* Editorial refinement: quieter surfaces, sharper hierarchy, less dashboard chrome. */
+:root {
+  --paper: #f5f6f3;
+  --ink: #1b2925;
+  --muted: #69766f;
+  --line: #dfe5df;
+  --green: #315f4c;
+  --green-dark: #244b3b;
+  --green-soft: #edf2ee;
+}
+.brand-mark { border-radius: 3px; transform: none; }
+.site-header { background: #f8f9f6; }
+.hero { gap: 62px; }
+.hero h1 { letter-spacing: -3.5px; }
+.hero h1 em, .how-heading h2 em { color: #315f4c; }
+.question-card { border-radius: 4px; box-shadow: none; }
+.question-card:focus-within { box-shadow: 0 0 0 2px rgba(49,95,76,.08); }
+.submit-button { border-radius: 3px; }
+.results-window { border-radius: 3px; box-shadow: 0 5px 18px rgba(25,42,32,.035); }
+.chart-area { border-radius: 3px; background: #f7f8f6; }
+.file-icon, .caption-icon, .step-icon { border-radius: 3px; }
+.meta-chip, .demo-label, .panel-menu, .evidence-badge { border-radius: 2px; }
+.step-card, .stat-card, .panel { border-radius: 3px; }
+.step-card { background: #fff; }
+.live-dot, .eyebrow-dot { box-shadow: none; }
+.trust-strip { background: #f7f8f5; }
+@media (max-width: 760px) {
+  .hero { gap: 42px; }
+}
