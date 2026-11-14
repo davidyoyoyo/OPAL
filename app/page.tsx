@@ -1,14 +1,13 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import {
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
   BarChart3,
   Check,
-  ChevronDown,
-  CircleHelp,
   Database,
   FileSpreadsheet,
   Layers3,
