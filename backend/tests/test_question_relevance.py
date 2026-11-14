@@ -24,7 +24,7 @@ def test_prevalence_question_requires_a_reported_measure_for_direct_answer():
 def test_survey_mention_without_a_reported_quantity_is_not_a_direct_answer():
     study = item(
         "Consumer attitudes toward ice cream",
-        "A survey found that respondents generally liked ice cream.",
+        "A survey of 1,200 respondents found that respondents generally liked ice cream.",
     )
 
     assert classify_relevance("How many people like ice cream?", study) is None
