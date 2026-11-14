@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import {
   ArrowDownRight,
@@ -32,13 +33,14 @@ const sampleRows = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   const [question, setQuestion] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!question.trim()) return;
-    setSubmitted(true);
+    router.push("/research?q=" + encodeURIComponent(question.trim()));
   }
 
   function useExample(example: string) {
