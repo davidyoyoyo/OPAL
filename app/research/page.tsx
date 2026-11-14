@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { ArrowLeft, ArrowUpRight, BookOpen, Database, ExternalLink, Search, ShieldCheck } from "lucide-react";
 
 type Study = {
