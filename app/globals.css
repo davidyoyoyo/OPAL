@@ -526,3 +526,27 @@ body, .live-workspace { background: #ffffff; }
 .finding-card h4 { margin: 0 0 12px; color: #26364b; font-size: 14px; line-height: 1.5; }
 .finding-excerpt { margin: 0; padding: 13px 15px; border-left: 3px solid #8db3e2; border-radius: 0 10px 10px 0; background: #f4f8fd; color: #43556c; font-size: 13px; line-height: 1.8; }
 .finding-limitation { margin: 10px 0 0; color: #8995a4; font-size: 10px; line-height: 1.6; }
+
+
+/* Survey data, progressive disclosure and methodology in the live workspace */
+.survey-data-section, .methodology-results-section { margin: 28px 0 12px; padding: 24px; border: 1px solid #e1e9f4; border-radius: 18px; background: #fbfdff; }
+.survey-results-list { display: grid; gap: 14px; }
+.survey-result-card { padding: 18px; border: 1px solid #e4ebf4; border-radius: 14px; background: #fff; }
+.survey-result-card h4 { margin: 0 0 12px; color: #26364b; font-size: 15px; line-height: 1.5; }
+.survey-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 18px; color: #7c8a9b; font-size: 10px; }
+.survey-bars { display: grid; gap: 13px; }
+.survey-bar-row > div:first-child { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; color: #52647a; font-size: 11px; }
+.survey-bar-row strong { color: #315f98; }
+.survey-bar-track { height: 8px; overflow: hidden; border-radius: 999px; background: #edf2f8; }
+.survey-bar-track span { display: block; height: 100%; border-radius: inherit; background: #5d91cf; }
+.survey-bar-row small { display: block; margin-top: 4px; color: #97a3b1; font-size: 9px; }
+.survey-result-card > a { display: inline-flex; align-items: center; gap: 5px; margin-top: 15px; color: #356fba; font-size: 10px; font-weight: 700; }
+.reveal-controls { display: flex; justify-content: center; margin-top: 16px; }
+.reveal-controls button { padding: 9px 16px; border: 1px solid #dce7f4; border-radius: 999px; background: #fff; color: #356fba; font: 600 11px var(--sans); cursor: pointer; }
+.reveal-controls button:hover { background: #edf4fc; }
+.methodology-results-grid { display: grid; gap: 10px; }
+.methodology-result-card { display: flex; gap: 14px; padding: 14px; border: 1px solid #e4ebf4; border-radius: 13px; background: #fff; }
+.methodology-result-card > span { display: grid; width: 29px; height: 29px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #eaf2fc; color: #356fba; font-size: 10px; font-weight: 800; }
+.methodology-result-card h4 { margin: 2px 0 5px; color: #2c4059; font-size: 12px; }
+.methodology-result-card p { margin: 0; color: #718198; font-size: 11px; line-height: 1.65; }
+@media (max-width: 650px) { .survey-data-section, .methodology-results-section { padding: 17px; } }
