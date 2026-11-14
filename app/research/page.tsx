@@ -21,6 +21,19 @@ type DuplicateCandidate = {
   resolution: string;
 };
 
+type SurveyResult = {
+  id: string;
+  question_text: string;
+  population: string | null;
+  sample_size: number | null;
+  base_n: number | null;
+  fieldwork_start: string | null;
+  fieldwork_end: string | null;
+  source_title: string;
+  source_url: string;
+  responses: { label: string; count: number | null; percentage: number | null }[];
+};
+
 type ResearchResult = {
   status: string;
   query: string;
@@ -34,6 +47,7 @@ type ResearchResult = {
   candidate_records_screened?: number;
   relevant_source_records?: number;
   findings?: { id: string; title: string; evidence_text: string; source_title: string; source_url: string; publication_year: number | null; evidence_type: string; evidence_level: string; interpretation: string }[];
+  survey_results?: SurveyResult[];
   abstracts_with_evidence?: number;
 };
 
@@ -44,6 +58,8 @@ export default function ResearchPage() {
   const [result, setResult] = useState<ResearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [visibleFindings, setVisibleFindings] = useState(3);
+  const [visibleMethodology, setVisibleMethodology] = useState(3);
 
   async function runResearch(nextQuestion: string) {
     const cleanQuestion = nextQuestion.trim();
@@ -52,6 +68,8 @@ export default function ResearchPage() {
     setLoading(true);
     setError("");
     setResult(null);
+    setVisibleFindings(3);
+    setVisibleMethodology(3);
 
     try {
       const response = await fetch(`${API_URL}/research`, {
@@ -145,6 +163,46 @@ export default function ResearchPage() {
               <div className="source-count"><Database size={15} /> {result.sources_searched.length} source connector{result.sources_searched.length === 1 ? "" : "s"}</div>
             </div>
 
+            <section className="survey-data-section">
+              <div className="findings-heading">
+                <div>
+                  <div className="live-kicker">MEASURED OPINIONS</div>
+                  <h3>Survey data</h3>
+                </div>
+                <span className="findings-count">{result.survey_results?.length ?? 0} datasets</span>
+              </div>
+              {result.survey_results && result.survey_results.length > 0 ? (
+                <div className="survey-results-list">
+                  {result.survey_results.map((survey) => (
+                    <article className="survey-result-card" key={survey.id}>
+                      <h4>{survey.question_text}</h4>
+                      <div className="survey-meta">
+                        <span>Asked to: {survey.population ?? "Not specified"}</span>
+                        <span>Question base: {survey.base_n?.toLocaleString() ?? "Not reported"}</span>
+                        <span>Sample: {survey.sample_size?.toLocaleString() ?? "Not reported"}</span>
+                        {survey.fieldwork_start && <span>Fieldwork: {survey.fieldwork_start}{survey.fieldwork_end ? ` – ${survey.fieldwork_end}` : ""}</span>}
+                      </div>
+                      <div className="survey-bars">
+                        {survey.responses.map((response, index) => (
+                          <div className="survey-bar-row" key={`${survey.id}-${index}`}>
+                            <div><span>{response.label}</span><strong>{response.percentage === null ? "—" : `${response.percentage.toFixed(1)}%`}</strong></div>
+                            <div className="survey-bar-track"><span style={{ width: `${Math.max(0, Math.min(100, response.percentage ?? 0))}%` }} /></div>
+                            <small>{response.count === null ? "Count not reported" : `${response.count.toLocaleString()} responses`}</small>
+                          </div>
+                        ))}
+                      </div>
+                      <a href={survey.source_url} target="_blank" rel="noreferrer">Open original survey source <ExternalLink size={12} /></a>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="findings-empty">
+                  <strong>No direct survey results are available for this question yet.</strong>
+                  <p>The current connector searches scholarly publication metadata; it does not yet retrieve question-level survey response counts. OPAL will show percentages, counts and respondent bases here only when a survey source provides them. It will not estimate public opinion from unrelated papers or abstracts.</p>
+                </div>
+              )}
+            </section>
+
             <section className="findings-section">
               <div className="findings-heading">
                 <div>
@@ -159,7 +217,7 @@ export default function ResearchPage() {
                     OPAL found {result.findings.length} source-backed abstract passage{result.findings.length === 1 ? "" : "s"} in the matching studies below. These are extracted passages, not invented summaries or population-wide survey estimates.
                   </p>
                   <div className="findings-list">
-                    {result.findings.map((finding) => (
+                    {result.findings.slice(0, visibleFindings).map((finding) => (
                       <article className="finding-card" key={finding.id}>
                         <div className="finding-card-topline">
                           <span className="finding-type">SUPPORTING RESEARCH · ABSTRACT</span>
@@ -176,11 +234,53 @@ export default function ResearchPage() {
                       </article>
                     ))}
                   </div>
+                  {result.findings.length > 3 && visibleFindings < result.findings.length && (
+                    <div className="reveal-controls">
+                      {visibleFindings === 3 ? (
+                        <button type="button" onClick={() => setVisibleFindings(5)}>Show more findings</button>
+                      ) : (
+                        <button type="button" onClick={() => setVisibleFindings(result.findings!.length)}>Show all {result.findings.length}</button>
+                      )}
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="findings-empty">
                   <strong>No usable abstracts were returned for these matching studies.</strong>
                   <p>OPAL found study records, but their Crossref entries did not include enough abstract text to extract evidence passages. This is different from finding no research. Open the study records below to inspect available metadata. Survey percentages and measured public-opinion results require dedicated survey sources and are not inferred from publication metadata.</p>
+                </div>
+              )}
+            </section>
+
+            <section className="methodology-results-section">
+              <div className="findings-heading">
+                <div>
+                  <div className="live-kicker">HOW TO READ THESE RESULTS</div>
+                  <h3>Methodology</h3>
+                </div>
+                <span className="findings-count">Evidence standards</span>
+              </div>
+              <div className="methodology-results-grid">
+                {[
+                  ["01", "Question relevance", "A record must match the subject and the intent of the question. Generic word overlap is not enough."],
+                  ["02", "Measured opinions", "Percentages are shown only when a survey reports the exact question, response counts and respondent base."],
+                  ["03", "Source traceability", "Every displayed passage links to the original source record so it can be checked."],
+                  ["04", "Evidence types stay separate", "Survey measurements, public discussions and academic background research are never combined into one sample."],
+                  ["05", "Limits remain visible", "Missing sample details, fieldwork dates, uncertainty and incomplete abstracts are identified rather than guessed."]
+                ].slice(0, visibleMethodology).map(([number, title, description]) => (
+                  <article className="methodology-result-card" key={number}>
+                    <span>{number}</span>
+                    <div><h4>{title}</h4><p>{description}</p></div>
+                  </article>
+                ))}
+              </div>
+              {visibleMethodology < 5 && (
+                <div className="reveal-controls">
+                  {visibleMethodology === 3 ? (
+                    <button type="button" onClick={() => setVisibleMethodology(5)}>Show more methodology</button>
+                  ) : (
+                    <button type="button" onClick={() => setVisibleMethodology(5)}>Show all methodology</button>
+                  )}
                 </div>
               )}
             </section>
