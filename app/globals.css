@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&display=swap');
 :root {
   --paper: #f7f8f5;
   --white: #ffffff;
@@ -395,4 +394,60 @@ button { cursor: pointer; }
   .live-search-form button { width: 100%; }
   .results-heading { align-items: flex-start; flex-direction: column; }
   .duplicate-pair { grid-template-columns: 1fr; gap: 6px; }
+}
+
+
+/* Softer, more human visual language */
+:root {
+  --sans: 'Nunito Sans', 'Avenir Next', Avenir, sans-serif;
+  --serif: 'Nunito Sans', 'Avenir Next', Avenir, sans-serif;
+  --mono: 'Nunito Sans', 'Avenir Next', Avenir, sans-serif;
+}
+html, body, button, input, textarea, select { font-family: var(--sans); }
+body { letter-spacing: 0; }
+.hero h1, .how-heading h2, .methodology-copy h2 {
+  font-family: var(--sans); font-weight: 800; letter-spacing: -2.1px;
+}
+.hero h1 em, .how-heading h2 em, .methodology-copy h2 em {
+  font-family: var(--sans); font-style: normal; font-weight: 700; letter-spacing: -1.7px;
+}
+.eyebrow, .section-kicker, .examples-label, .trust-intro, .preview-topline,
+.table-heading, .table-head, .footer-note, .workspace-kicker, .panel-kicker,
+.live-kicker, .study-number, .study-doi, .sidebar-label, .stat-card > span,
+.evidence-table th { font-family: var(--sans); letter-spacing: .7px; }
+.brand-mark { border-radius: 9px; }
+.question-card { border-radius: 18px; box-shadow: 0 8px 28px rgba(31,55,39,.045); }
+.question-card:focus-within { border-color: #a9c4b1; box-shadow: 0 0 0 4px rgba(49,95,76,.07); }
+.submit-button, .export-button, .small-export, .live-search-form button { border-radius: 999px; }
+.results-window { border-radius: 18px; box-shadow: 0 12px 36px rgba(25,42,32,.055); }
+.chart-area { border-radius: 13px; }
+.file-icon, .caption-icon, .step-icon, .sidebar-note-icon, .evidence-icon { border-radius: 11px; }
+.meta-chip, .demo-label, .panel-menu, .evidence-badge { border-radius: 999px; }
+.step-card, .stat-card, .panel { border-radius: 15px; }
+.step-card { padding: 25px; }
+.workspace-sidebar { border-radius: 0 18px 18px 0; }
+.sidebar-link, .methodology-toggle, .demo-warning { border-radius: 12px; }
+.live-search-form { border-radius: 16px; }
+.study-locations a { border-radius: 999px; }
+.live-empty, .live-error, .duplicate-review { border-radius: 14px; }
+.question-card label { font-family: var(--sans); letter-spacing: .8px; }
+.table-row, .evidence-table td { font-size: 10px; }
+.window-title strong { font-size: 12px; }
+.window-title span { font-size: 9px; }
+.methodology-section { max-width: 1156px; margin: 0 auto; padding: 20px 30px 100px; }
+.methodology-copy { max-width: 700px; }
+.methodology-copy h2 { margin: 13px 0 12px; color: var(--ink); font-size: clamp(30px, 4vw, 43px); line-height: 1.12; }
+.methodology-copy h2 em { color: var(--green); }
+.methodology-copy > p { max-width: 650px; margin: 0; color: #69766f; font-size: 14px; line-height: 1.85; }
+.methodology-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 34px; }
+.methodology-card { min-height: 205px; padding: 23px; border: 1px solid #e2e8e1; border-radius: 17px; background: rgba(255,255,255,.76); }
+.methodology-index { display: inline-grid; width: 31px; height: 31px; place-items: center; border-radius: 50%; background: #edf3ee; color: var(--green); font-size: 11px; font-weight: 800; }
+.methodology-card h3 { margin: 21px 0 8px; color: #293a30; font-size: 16px; font-weight: 800; }
+.methodology-card p { margin: 0; color: #77837a; font-size: 12px; line-height: 1.8; }
+.methodology-note { display: flex; align-items: center; gap: 9px; margin: 20px 0 0; color: #6f7d72; font-size: 11px; }
+.methodology-note svg { flex: 0 0 auto; color: var(--green); }
+@media (max-width: 760px) {
+  .methodology-section { padding: 0 22px 70px; }
+  .methodology-grid { grid-template-columns: 1fr; gap: 11px; }
+  .methodology-card { min-height: 0; }
 }
