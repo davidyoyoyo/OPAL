@@ -266,7 +266,9 @@ export default function ResearchPage() {
                   ["02", "Measured opinions", "Percentages are shown only when a survey reports the exact question, response counts and respondent base."],
                   ["03", "Source traceability", "Every displayed passage links to the original source record so it can be checked."],
                   ["04", "Evidence types stay separate", "Survey measurements, public discussions and academic background research are never combined into one sample."],
-                  ["05", "Limits remain visible", "Missing sample details, fieldwork dates, uncertainty and incomplete abstracts are identified rather than guessed."]
+                  ["05", "Limits remain visible", "Missing sample details, fieldwork dates, uncertainty and incomplete abstracts are identified rather than guessed."],
+                  ["06", "Denominators matter", "Each percentage is tied to the base for that exact survey question, not automatically to the full study sample."],
+                  ["07", "Duplicates are reviewed", "Records are linked when identifiers support the match; uncertain title similarities are flagged instead of silently merged."]
                 ].slice(0, visibleMethodology).map(([number, title, description]) => (
                   <article className="methodology-result-card" key={number}>
                     <span>{number}</span>
@@ -274,12 +276,12 @@ export default function ResearchPage() {
                   </article>
                 ))}
               </div>
-              {visibleMethodology < 5 && (
+              {visibleMethodology < 7 && (
                 <div className="reveal-controls">
                   {visibleMethodology === 3 ? (
                     <button type="button" onClick={() => setVisibleMethodology(5)}>Show more methodology</button>
                   ) : (
-                    <button type="button" onClick={() => setVisibleMethodology(5)}>Show all methodology</button>
+                    <button type="button" onClick={() => setVisibleMethodology(7)}>Show all methodology</button>
                   )}
                 </div>
               )}
