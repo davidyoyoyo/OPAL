@@ -103,7 +103,7 @@ def classify_relevance(query: str, item: RawSourceItem) -> str | None:
             bool(_PREVALENCE_MEASURE_SIGNALS & all_terms)
             or bool(re.search(r"\b\d+(?:\.\d+)?\s*%", abstract_text))
             or bool(re.search(r"\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+of\s+(the\s+)?(respondents|participants|consumers)\b", abstract_text, re.I))
-            or bool(re.search(r"\b\d+\s+(respondents|participants|consumers)\b", abstract_text, re.I))
+            or bool(re.search(r"\b\d+\s+(respondents|participants|consumers)\s+(liked|preferred|supported|favored|favourited|enjoyed)\b", abstract_text, re.I))
         )
         if has_survey_context and has_opinion_outcome and has_reported_measure:
             return "direct_answer"
