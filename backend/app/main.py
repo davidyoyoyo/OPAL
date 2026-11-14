@@ -5,6 +5,9 @@ from pydantic import BaseModel, Field
 from app.core.config import settings
 from app.services.research import run_research
 from app.services.synthesis import build_extractive_synthesis
+from app.services.survey_research import run_survey_search
+from app.sources.survey_base import SurveyQuery
+from app.sources.survey_registry import survey_registry
 from app.sources.registry import source_registry
 from app.sources.providers.crossref import CrossrefAdapter
 from app.sources.providers.eurostat import EurostatAdapter
@@ -70,7 +73,10 @@ async def health() -> dict[str, str]:
 
 @app.get("/sources")
 async def list_sources() -> dict:
-    return {"sources": source_registry.public_catalog()}
+    return {
+        "scholarly_sources": source_registry.public_catalog(),
+        "survey_sources": survey_registry.public_catalog(),
+    }
 
 
 @app.post("/research")
@@ -87,13 +93,27 @@ async def research(request: ResearchRequest) -> dict:
     # Always return a useful, clearly labelled fallback brief. When configured,
     # one structured AI call replaces it with a true cross-study synthesis.
     result["evidence_synthesis"] = build_extractive_synthesis(question, findings)
+    survey_search = await run_survey_search(
+        SurveyQuery(question=question),
+        survey_registry,
+    )
+    result["survey_results"] = survey_search["results"]
+    result["survey_source_failures"] = survey_search["source_failures"]
     result["survey_data_status"] = {
-        "status": "not_connected",
+        "status": survey_search["status"],
+        "sources_searched": survey_search["sources_searched"],
         "message": (
-            "No survey repository currently supplies question-level response distributions to OPAL. "
-            "Crossref provides scholarly publication metadata, while the current Eurostat connector "
-            "only discovers datasets; neither is presently connected as a measured-opinion source. "
-            "OPAL therefore shows no survey counts or percentages for this search."
+            "No survey repository is currently connected to OPAL. Crossref provides scholarly "
+            "publication metadata and the current Eurostat connector discovers statistical datasets; "
+            "neither supplies question-level opinion response distributions here. OPAL therefore "
+            "shows no survey counts or percentages for this search."
+            if survey_search["status"] == "not_connected"
+            else (
+                "Connected survey sources were searched, but none returned a matching question-level "
+                "distribution with its original wording and denominator."
+                if survey_search["status"] == "no_results"
+                else "Question-level survey results were retrieved from the connected survey sources."
+            )
         ),
     }
     result["ai_processing"] = {"status": "not_configured"}
