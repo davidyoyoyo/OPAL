@@ -1,8 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
 from app.core.config import settings
 from app.services.research import run_research
+from app.services.synthesis import build_extractive_synthesis
 from app.sources.registry import source_registry
 from app.sources.providers.crossref import CrossrefAdapter
 from app.sources.providers.eurostat import EurostatAdapter
@@ -44,6 +46,23 @@ def _configured_ai_service():
     return service
 
 
+def _validated_synthesis(ai_synthesis, findings: list[dict]) -> dict:
+    """Reject model-generated citations that do not point to retrieved records."""
+    valid_ids = {
+        str(item.get("id") or item.get("source_url") or item.get("source_title") or "")
+        for item in findings
+    }
+    output = ai_synthesis.model_dump()
+    safe_points = []
+    for point in output.get("key_points", []):
+        source_ids = [source_id for source_id in point.get("source_ids", []) if source_id in valid_ids]
+        if source_ids:
+            safe_points.append({**point, "source_ids": source_ids})
+    output["key_points"] = safe_points
+    output["mode"] = "ai_synthesis"
+    return output
+
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "service": settings.app_name}
@@ -60,9 +79,23 @@ async def research(request: ResearchRequest) -> dict:
     if not question:
         raise HTTPException(status_code=422, detail="Question cannot be empty.")
 
-    # AI enriches the research record, but the original question remains the
-    # retrieval query so a model cannot silently redirect the search.
+    # The original question remains the retrieval query. AI may interpret and
+    # synthesize retrieved evidence, but cannot silently redirect source search.
     result = await run_research(question, source_registry)
+    findings = result.get("findings", [])
+
+    # Always return a useful, clearly labelled fallback brief. When configured,
+    # one structured AI call replaces it with a true cross-study synthesis.
+    result["evidence_synthesis"] = build_extractive_synthesis(question, findings)
+    result["survey_data_status"] = {
+        "status": "not_connected",
+        "message": (
+            "No survey repository currently supplies question-level response distributions to OPAL. "
+            "Crossref provides scholarly publication metadata, while the current Eurostat connector "
+            "only discovers datasets; neither is presently connected as a measured-opinion source. "
+            "OPAL therefore shows no survey counts or percentages for this search."
+        ),
+    }
     result["ai_processing"] = {"status": "not_configured"}
 
     try:
@@ -77,29 +110,28 @@ async def research(request: ResearchRequest) -> dict:
     try:
         plan = await ai_service.interpret_question(question)
         result["research_plan"] = plan.model_dump()
-        result["ai_processing"] = {
-            "status": "question_interpreted",
-            "evidence_items_interpreted": 0,
-        }
+        result["ai_processing"] = {"status": "question_interpreted", "synthesis": "not_attempted"}
 
-        # Limit inference calls per visitor request. Only abstract-derived
-        # findings are interpreted; the AI does not create survey statistics.
-        for finding in result.get("findings", [])[:5]:
-            interpretation = await ai_service.interpret_evidence(
-                finding.get("evidence_text") or finding.get("summary") or "",
+        if findings:
+            source_passages = [
                 {
-                    "provider": "crossref",
-                    "source_title": finding.get("source_title"),
-                    "source_url": finding.get("source_url"),
-                    "publication_year": finding.get("publication_year"),
-                    "evidence_level": finding.get("evidence_level"),
-                },
-            )
-            finding["ai_interpretation"] = interpretation.model_dump()
-            result["ai_processing"]["evidence_items_interpreted"] += 1
+                    "source_id": str(item.get("id") or item.get("source_url") or item.get("source_title") or ""),
+                    "source_title": item.get("source_title"),
+                    "source_url": item.get("source_url"),
+                    "publication_year": item.get("publication_year"),
+                    "passage": str(item.get("evidence_text") or item.get("summary") or "")[:2500],
+                    "evidence_level": item.get("evidence_level"),
+                }
+                for item in findings[:12]
+            ]
+            synthesis = await ai_service.synthesize_evidence(question, source_passages)
+            result["evidence_synthesis"] = _validated_synthesis(synthesis, findings)
+            result["ai_processing"]["synthesis"] = "completed"
+        else:
+            result["ai_processing"]["synthesis"] = "no_abstracts_to_synthesize"
     except AIInterpretationError:
-        # Research results remain available if the optional AI provider is
-        # temporarily unavailable or returns invalid structured output.
+        # Retrieved records and the deterministic fallback remain available if
+        # the optional AI provider fails or returns invalid structured output.
         result["ai_processing"]["status"] = "partial_failure"
 
     return result
