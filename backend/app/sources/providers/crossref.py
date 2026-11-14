@@ -12,7 +12,7 @@ class CrossrefAdapter(SourceAdapter):
 
     async def search(self, request: SourceQuery) -> list[RawSourceItem]:
         params = {
-            "query.bibliographic": request.query,
+            "query.title": request.query,
             "rows": request.limit,
             "select": "DOI,title,author,published,published-print,published-online,abstract,URL,type",
         }
