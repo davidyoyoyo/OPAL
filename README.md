@@ -2,47 +2,67 @@
 
 **Opinion research, made clear.**
 
-OPAL is an account-free opinion research platform. A visitor asks a question, OPAL gathers and structures relevant evidence, and the visitor can inspect and export the resulting data.
+OPAL is an account-free opinion research platform. A visitor asks a question, OPAL searches connected evidence sources, and the visitor can inspect source records and export structured findings.
 
 ## Current stage
 
-The first commit establishes the public-facing website interface. The research preview is explicitly illustrative; no live research or statistical results are generated yet.
+The frontend is connected to the first version of the Python research API. The API currently searches Crossref's public scholarly metadata service. It returns publication records, not validated opinion percentages. Survey-specific sources, extraction, quality checks and statistics will be added in later stages.
 
 ## Technology
 
-- **Frontend:** Next.js 15, React 19 and TypeScript
-- **Styling:** CSS
-- **Icons:** Lucide
-- **Planned research backend:** Python + FastAPI
-- **Planned data processing:** Python, pandas and NumPy
+- **Frontend:** Next.js, React and TypeScript
+- **Backend API:** Python + FastAPI
+- **Provider requests:** httpx
+- **Research data processing:** Python (pandas / NumPy will be added when the analysis pipeline needs them)
 - **Planned database:** PostgreSQL
-
-Each part uses the technology best suited to its job. The frontend and research backend will communicate through a defined API.
 
 ## Run locally
 
-Requirements: Node.js 20.9 or later.
+Requirements: Node.js 20.9+ and Python 3.11+.
+
+### 1. Start the research API
+
+In Terminal:
 
 ```bash
+cd OPAL/backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+uvicorn app.main:app --reload
+```
+
+The API runs at http://127.0.0.1:8000. Its interactive documentation is at http://127.0.0.1:8000/docs.
+
+### 2. Start the website
+
+Open a second Terminal window:
+
+```bash
+cd OPAL
 npm install
 npm run dev
 ```
 
 Open http://localhost:3000.
 
+The website calls the local API by default. To use another API URL, copy `.env.example` to `.env.local` and change `NEXT_PUBLIC_OPAL_API_URL`.
+
+## Adding a source
+
+Each provider gets its own adapter under `backend/app/sources/providers/`. It implements the shared `SourceAdapter` interface and maps provider-specific results into OPAL's `RawSourceItem` model. The engine then handles orchestration and identity resolution without needing provider-specific code.
+
+See [the engine guide](backend/README.md) and [the architecture notes](docs/ENGINE_ARCHITECTURE.md).
+
+## Duplicate-study handling
+
+A study is the underlying research work; a source location is a website record that points to it. Multiple websites can therefore point to one study. Matching DOI identifiers are grouped under one study, while similar titles are flagged for review rather than silently merged. Separate survey waves remain separate evidence when their samples, dates or methods differ.
+
 ## Product principles
 
 - No accounts or registration.
 - A question-first workflow.
-- Survey measurements, expressed online opinions and supporting research remain distinct evidence types.
+- Survey measurements, expressed online opinions and supporting research remain distinct.
 - Every result should be traceable to its sources.
-- Statistical calculations are performed by conventional code, not guessed by an LLM.
+- Statistical calculations are performed by code, not guessed by an LLM.
 - Users can export their results and leave.
-
-## Roadmap
-
-1. Website foundation and research request interface.
-2. Research results workspace: tables, charts, filters and exports.
-3. Python API and research orchestration.
-4. Source connectors and permissions-aware evidence collection.
-5. Structured evidence database, provenance and quality controls.
