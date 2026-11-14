@@ -142,6 +142,7 @@ export default function ResearchPage() {
             </div>
 
             {result.message && <div className="live-empty">{result.message}</div>}
+            {result.studies.length === 0 && !result.message && <div className="live-empty">No publication records were returned. Try a broader topic or different wording.</div>}
 
             {result.studies.length > 0 && (
               <div className="study-list">
