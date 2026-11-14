@@ -49,41 +49,20 @@ type ResearchResult = {
   findings?: { id: string; title: string; summary?: string; evidence_text: string; source_title: string; source_url: string; publication_year: number | null; evidence_type: string; evidence_level: string; interpretation: string }[];
   survey_results?: SurveyResult[];
   abstracts_with_evidence?: number;
+  evidence_synthesis?: {
+    mode: "ai_synthesis" | "extractive_fallback";
+    overview: string;
+    key_points: {
+      text: string;
+      source_ids: string[];
+      source_title?: string | null;
+      source_url?: string | null;
+      publication_year?: number | null;
+    }[];
+    limitations: string[];
+  };
+  survey_data_status?: { status: string; message: string };
 };
-
-
-type EvidencePoint = {
-  text: string;
-  source_title: string;
-  source_url: string;
-  publication_year: number | null;
-};
-
-function buildEvidencePoints(findings: NonNullable<ResearchResult["findings"]>): EvidencePoint[] {
-  const seen = new Set<string>();
-  const points: EvidencePoint[] = [];
-
-  for (const finding of findings) {
-    const sentences = (finding.summary ?? finding.evidence_text)
-      .split(/(?<=[.!?])\s+(?=[A-Z0-9])/)
-      .map((sentence) => sentence.trim())
-      .filter((sentence) => sentence.length >= 35);
-
-    for (const sentence of sentences) {
-      const key = sentence.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-      if (!key || seen.has(key)) continue;
-      seen.add(key);
-      points.push({
-        text: sentence,
-        source_title: finding.source_title,
-        source_url: finding.source_url,
-        publication_year: finding.publication_year,
-      });
-    }
-  }
-
-  return points.slice(0, 5);
-}
 
 const API_URL = process.env.NEXT_PUBLIC_OPAL_API_URL ?? "http://127.0.0.1:8000";
 
@@ -231,8 +210,8 @@ export default function ResearchPage() {
                 </div>
               ) : (
                 <div className="findings-empty">
-                  <strong>No measured opinion data is connected yet.</strong>
-                  <p>This search currently uses Crossref, which indexes scholarly publications but does not provide the underlying survey response tables. Counts, percentages and charts will appear here once OPAL connects to survey repositories and retrieves the original question, respondent base and response distribution. We will not manufacture percentages from abstracts.</p>
+                  <strong>No measured-opinion source is connected.</strong>
+                  <p>{result.survey_data_status?.message ?? "This search returned no original survey question and response distribution. OPAL will not manufacture percentages from scholarly abstracts."}</p>
                 </div>
               )}
             </section>
@@ -248,24 +227,51 @@ export default function ResearchPage() {
               {result.findings && result.findings.length > 0 ? (
                 <>
                   <p className="findings-intro">
-                    A single brief bringing together the clearest points reported in the matching study abstracts. Each point links to its source; these are supporting research findings, not population-wide opinion estimates.
+                    {result.evidence_synthesis?.mode === "ai_synthesis"
+                      ? "A cross-study synthesis of the retrieved abstracts. Each key point is linked to the source records that support it."
+                      : "A transparent extractive brief selecting result-oriented passages across the abstracts, rather than repeating each paper's opening sentence. It does not claim a pooled result."}
                   </p>
                   <article className="evidence-brief-card">
-                    <div className="evidence-brief-label">KEY POINTS FROM THE AVAILABLE ABSTRACTS</div>
-                    <ul className="evidence-brief-list">
-                      {buildEvidencePoints(result.findings).map((point, index) => (
-                        <li key={`${point.source_url}-${index}`}>
-                          <p>{point.text}</p>
-                          <a href={point.source_url} target="_blank" rel="noreferrer">
-                            {point.source_title}{point.publication_year ? ` · ${point.publication_year}` : ""} <ExternalLink size={12} />
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="finding-limitation">This brief is limited to information present in the abstracts returned by Crossref. It does not claim that the listed factors are ranked or universally important.</p>
+                    <div className="evidence-brief-label">
+                      {result.evidence_synthesis?.mode === "ai_synthesis" ? "CROSS-STUDY SUMMARY" : "ABSTRACT-BASED EVIDENCE DIGEST"}
+                    </div>
+                    <p className="evidence-brief-overview">
+                      {result.evidence_synthesis?.overview ?? "Relevant abstracts were found, but no synthesis was returned."}
+                    </p>
+                    {result.evidence_synthesis?.key_points?.length ? (
+                      <ul className="evidence-brief-list">
+                        {result.evidence_synthesis.key_points.map((point, index) => {
+                          const citedStudies = (point.source_ids ?? [])
+                            .map((sourceId) => result.findings?.find((finding) => finding.id === sourceId))
+                            .filter((finding): finding is NonNullable<ResearchResult["findings"]>[number] => Boolean(finding));
+                          return (
+                            <li key={`${point.source_ids.join("-")}-${index}`}>
+                              <p>{point.text}</p>
+                              {citedStudies.length > 0 ? (
+                                <div className="evidence-point-sources">
+                                  {citedStudies.map((study) => (
+                                    <a href={study.source_url} key={study.id} target="_blank" rel="noreferrer">
+                                      {study.source_title}{study.publication_year ? ` · ${study.publication_year}` : ""} <ExternalLink size={12} />
+                                    </a>
+                                  ))}
+                                </div>
+                              ) : point.source_url ? (
+                                <a href={point.source_url} target="_blank" rel="noreferrer">
+                                  {point.source_title ?? "Open supporting study"} <ExternalLink size={12} />
+                                </a>
+                              ) : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="finding-limitation">The available abstracts did not contain enough result-oriented detail to produce reliable key points. Open the study records below to inspect them.</p>
+                    )}
+                    {result.evidence_synthesis?.limitations?.map((limitation, index) => (
+                      <p className="finding-limitation" key={index}>{limitation}</p>
+                    ))}
                   </article>
                 </>
-              ) : (
                 <div className="findings-empty">
                   <strong>No usable abstracts were returned for these matching studies.</strong>
                   <p>OPAL found study records, but their Crossref entries did not include enough abstract text to extract evidence. This is different from finding no research. Open the study records below to inspect available metadata. Survey percentages and measured public-opinion results require dedicated survey sources and are not inferred from publication metadata.</p>
