@@ -27,3 +27,12 @@ A survey connector may emit a `SurveyQuestionResult` only when it can preserve:
 Before connecting a survey archive, review its current terms for commercial use, redistribution of derived aggregates, attribution, registration/API requirements, rate limits and retention. A free download is not automatically a commercial reuse licence.
 
 The current Crossref connector is for scholarly publication discovery, not survey response data. The current Eurostat connector discovers statistical datasets; it is not yet a question-level opinion survey connector. Until a compatible provider is implemented, the API must return an explicit `not_connected` status and an empty survey-results list.
+
+
+## Initial repository review
+
+- **Eurobarometer aggregate tables are a promising first candidate.** The European Data Portal lists downloadable XLSX volumes containing weighted frequencies by country and EU-level results. Its read-only API can discover datasets, but each dataset and distribution must still be checked for its actual licence and documentation before ingestion.
+- **GESIS-hosted Eurobarometer microdata is not a default OPAL source.** GESIS access conditions vary by dataset/access class, and its current general terms prohibit commercial use unless a dataset expressly says otherwise. Some downloads also require registration. This does not meet OPAL's requirement for a blanket, no-cost commercial reuse path.
+- **European Social Survey is not a default OPAL source either.** Its API is currently a beta file-download endpoint, and ESS ERIC materials describe non-commercial reuse as the general rule, with commercial use handled case by case.
+
+A future Eurobarometer aggregate connector should first retrieve dataset metadata and distribution licences from the European Data Portal, reject records without a compatible explicit reuse licence, then parse the published XLSX volumes while retaining the question wording, answer labels, weighted/unweighted base, geography, wave, fieldwork dates and workbook URL. It must not treat a survey's overall sample size as the base for every question.
