@@ -27,6 +27,7 @@ def group_source_records(items: list[RawSourceItem]) -> list[StudyRecord]:
             title=item.title,
             publication_year=item.publication_year,
             doi=item.doi,
+            identifiers=item.identifiers,
             authors=item.authors,
             abstract=item.abstract,
             locations=[
