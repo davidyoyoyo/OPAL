@@ -1,4 +1,5 @@
 import asyncio
+import html
 import re
 
 from app.models.evidence import SourceLocation, StudyRecord
@@ -15,9 +16,9 @@ _STOPWORDS = {
     "that", "the", "their", "them", "then", "there", "these", "they", "this",
     "those", "through", "under", "until", "very", "was", "were", "what", "when",
     "where", "which", "while", "who", "will", "with", "would", "your",
-    "care", "cum", "care", "ce", "cea", "cei", "cele", "din", "despre", "este",
-    "sunt", "pentru", "prin", "cum", "mai", "mult", "mai", "sau", "dar", "care",
-    "consider", "think", "people", "opinion", "opinions", "view", "views",
+    "care", "cum", "ce", "cea", "cei", "cele", "din", "despre", "este",
+    "sunt", "pentru", "prin", "mai", "mult", "sau", "dar", "consider", "think",
+    "people", "opinion", "opinions", "view", "views",
 }
 
 
@@ -33,7 +34,6 @@ def relevance_score(query: str, item: RawSourceItem) -> float:
     query_terms = _terms(query)
     if not query_terms:
         return 1.0
-
     title_terms = _terms(item.title)
     abstract_terms = _terms(item.abstract or "")
     title_coverage = len(query_terms & title_terms) / len(query_terms)
@@ -45,32 +45,94 @@ def is_relevant(query: str, item: RawSourceItem) -> bool:
     query_terms = _terms(query)
     if not query_terms:
         return True
-
     title_hits = len(query_terms & _terms(item.title))
     abstract_hits = len(query_terms & _terms(item.abstract or ""))
     score = relevance_score(query, item)
-
-    # Prefer a match in the title. Abstract-only matches need multiple shared
-    # topic terms so a single incidental word does not qualify a paper.
     return score >= 0.16 and (title_hits >= 1 or abstract_hits >= 2)
+
+
+def _plain_abstract(value: str) -> str:
+    """Remove JATS/HTML markup while retaining readable text and section labels."""
+    value = re.sub(r"</(?:jats:)?(?:title|label)>", " — ", value, flags=re.IGNORECASE)
+    value = re.sub(r"<[^>]+>", " ", value)
+    value = html.unescape(value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def extract_abstract_findings(query: str, studies: list[StudyRecord]) -> list[dict]:
+    """
+    Extract traceable abstract passages, not inferred survey outcomes.
+    Each displayed passage is copied from the source abstract after markup cleanup.
+    """
+    query_terms = _terms(query)
+    findings: list[dict] = []
+
+    for study in studies:
+        if not study.abstract:
+            continue
+        abstract = _plain_abstract(study.abstract)
+        if len(abstract) < 45:
+            continue
+
+        sentences = [
+            part.strip(" \t\n.;")
+            for part in re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", abstract)
+            if len(part.strip()) >= 35
+        ]
+        if not sentences:
+            sentences = [abstract]
+
+        # Prefer explicitly labelled Results/Conclusion passages when Crossref
+        # preserves structured abstract headings.
+        labelled = [
+            sentence for sentence in sentences
+            if re.search(r"\b(results?|findings?|conclusions?)\s*[—:-]", sentence, re.I)
+        ]
+        candidates = labelled or sentences
+        if query_terms:
+            matching = [
+                sentence for sentence in candidates
+                if len(query_terms & _terms(sentence)) > 0
+            ]
+            candidates = matching or candidates
+
+        excerpt = " ".join(candidates[:3]).strip()
+        if len(excerpt) > 900:
+            excerpt = excerpt[:897].rsplit(" ", 1)[0] + "..."
+
+        source_url = str(study.locations[0].url) if study.locations else (
+            f"https://doi.org/{study.doi}" if study.doi else ""
+        )
+        findings.append({
+            "id": study.doi or source_url or study.title,
+            "title": "Abstract evidence",
+            "evidence_text": excerpt,
+            "source_title": study.title,
+            "source_url": source_url,
+            "publication_year": study.publication_year,
+            "evidence_type": "supporting_research",
+            "evidence_level": "abstract",
+            "interpretation": "Source passage, not an independently verified survey result or population estimate.",
+        })
+
+    return findings
 
 
 def group_source_records(items: list[RawSourceItem]) -> list[StudyRecord]:
     """Merge only records with the same strong identifier (currently DOI)."""
     studies: list[StudyRecord] = []
     doi_index: dict[str, int] = {}
-
     for item in items:
         key = exact_identity_key(item)
         if key and key in doi_index:
             existing = studies[doi_index[key]]
-            existing.locations.append(
-                SourceLocation(
-                    provider=item.provider,
-                    url=item.url,
-                    provider_record_id=item.provider_record_id,
-                )
-            )
+            existing.locations.append(SourceLocation(
+                provider=item.provider,
+                url=item.url,
+                provider_record_id=item.provider_record_id,
+            ))
+            if not existing.abstract and item.abstract:
+                existing.abstract = item.abstract
             continue
 
         study = StudyRecord(
@@ -80,19 +142,16 @@ def group_source_records(items: list[RawSourceItem]) -> list[StudyRecord]:
             identifiers=item.identifiers,
             authors=item.authors,
             abstract=item.abstract,
-            locations=[
-                SourceLocation(
-                    provider=item.provider,
-                    url=item.url,
-                    provider_record_id=item.provider_record_id,
-                )
-            ],
+            locations=[SourceLocation(
+                provider=item.provider,
+                url=item.url,
+                provider_record_id=item.provider_record_id,
+            )],
             identity_status="verified" if key else "unresolved",
         )
         if key:
             doi_index[key] = len(studies)
         studies.append(study)
-
     return studies
 
 
@@ -125,8 +184,6 @@ async def run_research(query: str, registry: SourceRegistry) -> dict:
             "sources_searched": [],
         }
 
-    # Screen up to the provider's supported maximum, then return only records
-    # that match the question. Never pad a result to a fixed number.
     request = SourceQuery(query=query, limit=100)
     results = await asyncio.gather(
         *(adapter.search(request) for adapter in adapters),
@@ -141,18 +198,16 @@ async def run_research(query: str, registry: SourceRegistry) -> dict:
             continue
         candidate_records.extend(result)
 
-    relevant_records = [
-        item for item in candidate_records if is_relevant(query, item)
-    ]
+    relevant_records = [item for item in candidate_records if is_relevant(query, item)]
     studies = group_source_records(relevant_records)
+    findings = extract_abstract_findings(query, studies)
     duplicate_candidates = find_duplicate_candidates(relevant_records)
+
     return {
         "status": "completed" if relevant_records else "no_results",
         "query": query,
         "studies": [study.model_dump(mode="json") for study in studies],
-        # Crossref currently supplies metadata and abstracts, not extracted
-        # opinion findings. Keep this empty rather than inventing conclusions.
-        "findings": [],
+        "findings": findings,
         "duplicate_candidates": duplicate_candidates,
         "sources_searched": [adapter.name for adapter in adapters],
         "source_failures": failures,
@@ -160,4 +215,5 @@ async def run_research(query: str, registry: SourceRegistry) -> dict:
         "relevant_source_records": len(relevant_records),
         "raw_records_found": len(candidate_records),
         "unique_studies": len(studies),
+        "abstracts_with_evidence": len(findings),
     }
