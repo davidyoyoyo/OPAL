@@ -134,6 +134,27 @@ def classify_relevance(query: str, item: RawSourceItem) -> str | None:
     return "direct_answer" if topic_terms and len(expanded_topics & all_terms) >= min(2, len(topic_terms)) else None
 
 
+def relevance_score(query: str, item: RawSourceItem) -> int:
+    """Return a simple deterministic lexical relevance score.
+
+    Kept as a public compatibility helper for callers/tests that need to rank
+    candidate records. Question-intent filtering is handled separately by
+    classify_relevance; a high topical score alone does not make evidence
+    suitable for answering a prevalence question.
+    """
+    query_terms = _normalized_terms(query)
+    if not query_terms:
+        return 0
+
+    title_terms = _normalized_terms(item.title)
+    abstract_terms = _normalized_terms(item.abstract or "")
+    expanded_topics = _topic_aliases(query_terms)
+
+    title_matches = len(expanded_topics & title_terms)
+    abstract_matches = len(expanded_topics & abstract_terms)
+    return title_matches * 3 + abstract_matches
+
+
 def is_relevant(query: str, item: RawSourceItem) -> bool:
     return classify_relevance(query, item) is not None
 
