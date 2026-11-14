@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
-from app.services.research import run_research
+from app.services.research import is_prevalence_question, run_research
 from app.services.synthesis import build_extractive_synthesis
 from app.services.survey_research import run_survey_search
 from app.sources.survey_base import SurveyQuery
@@ -139,7 +139,7 @@ async def research(request: ResearchRequest) -> dict:
 
         synthesis_findings = (
             [item for item in findings if item.get("evidence_role") == "explanatory_context"]
-            if plan.intent == "prevalence" else findings
+            if is_prevalence_question(question) else findings
         )
         if synthesis_findings:
             source_passages = [
@@ -157,7 +157,7 @@ async def research(request: ResearchRequest) -> dict:
             synthesis = await ai_service.synthesize_evidence(question, source_passages)
             result["evidence_synthesis"] = _validated_synthesis(synthesis, source_passages)
             result["ai_processing"]["synthesis"] = "completed"
-        elif findings and plan.intent == "prevalence":
+        elif findings and is_prevalence_question(question):
             result["ai_processing"]["synthesis"] = "no_explanatory_studies"
         else:
             result["ai_processing"]["synthesis"] = "no_abstracts_to_synthesize"
