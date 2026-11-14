@@ -137,7 +137,11 @@ async def research(request: ResearchRequest) -> dict:
         result["research_plan"] = plan.model_dump()
         result["ai_processing"] = {"status": "question_interpreted", "synthesis": "not_attempted"}
 
-        if findings:
+        synthesis_findings = (
+            [item for item in findings if item.get("evidence_role") == "explanatory_context"]
+            if plan.intent == "prevalence" else findings
+        )
+        if synthesis_findings:
             source_passages = [
                 {
                     "source_id": str(item.get("id") or item.get("source_url") or item.get("source_title") or ""),
@@ -148,11 +152,13 @@ async def research(request: ResearchRequest) -> dict:
                     "evidence_level": item.get("evidence_level"),
                     "evidence_role": item.get("evidence_role"),
                 }
-                for item in findings[:20]
+                for item in synthesis_findings[:20]
             ]
             synthesis = await ai_service.synthesize_evidence(question, source_passages)
             result["evidence_synthesis"] = _validated_synthesis(synthesis, source_passages)
             result["ai_processing"]["synthesis"] = "completed"
+        elif findings and plan.intent == "prevalence":
+            result["ai_processing"]["synthesis"] = "no_explanatory_studies"
         else:
             result["ai_processing"]["synthesis"] = "no_abstracts_to_synthesize"
     except AIInterpretationError:
