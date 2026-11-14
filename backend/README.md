@@ -33,10 +33,9 @@ This prevents the same paper mirrored across several websites from being counted
 
 ## Current scope
 
-The engine currently registers three discovery connectors:
+The engine currently registers two discovery connectors:
 
 - **Crossref** — scholarly metadata. Abstracts can be copyrighted even though most bibliographic metadata is reusable.
-- **OpenAlex** — scholarly metadata released under CC0. The adapter deliberately does not copy abstracts; it stores bibliographic metadata and links so OPAL can check the licence of the actual work before using its text.
 - **Eurostat** — official dataset catalogue discovery. Returned records are dataset descriptions, not extracted statistical values. Eurostat is a supporting-statistics source, not a general public-opinion poll provider.
 
 These connectors discover sources. They do not yet extract question-level survey distributions or calculate population opinion estimates. The survey-results array therefore remains empty until a source provides validated question-level data.
@@ -83,19 +82,6 @@ instance before deployment.
 ## Connected providers and configuration
 
 All provider calls are made by the backend; API keys must never be placed in frontend code.
-
-### OpenAlex
-
-- Base endpoint: `https://api.openalex.org/works`
-- No key is required for basic use.
-- Current free-key allowance: **$1 of API usage per day**, reset at midnight UTC. The keyless allowance is **$0.10/day**.
-- Request speed: **10 requests/second without a key; 30 requests/second with a free key**. Some expensive query types have lower limits.
-- Search budget at the published example costs: approximately **1,000 search calls/day** on a free key, or **10,000 list/filter calls/day**. Costs depend on endpoint/query type.
-- Page size maximum: **100**. Basic page-number pagination stops at **10,000 results**; cursor paging requires a key.
-- Data licence: OpenAlex metadata is CC0. The adapter does not copy abstracts or full text; those may have separate rights at the work level.
-- Optional environment variable: `OPAL_OPENALEX_API_KEY`.
-
-Get a free key at https://openalex.org/ after creating an account and verifying the email address. The connector works without it, but the free key increases the daily budget. Do not commit the key to Git.
 
 ### Eurostat
 
