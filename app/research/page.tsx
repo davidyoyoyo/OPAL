@@ -42,6 +42,7 @@ type ResearchResult = {
   duplicate_candidates: DuplicateCandidate[];
   sources_searched: string[];
   source_failures?: { source: string; error: string }[];
+  survey_source_failures?: { source: string; error: string }[];
   raw_records_found?: number;
   unique_studies?: number;
   candidate_records_screened?: number;
@@ -387,9 +388,11 @@ export default function ResearchPage() {
               </section>
             )}
 
-            {result.source_failures && result.source_failures.length > 0 && (
+            {((result.source_failures ?? []).concat(result.survey_source_failures ?? [])).length > 0 && (
               <div className="source-failures">
-                {result.source_failures.map((failure) => <p key={failure.source}>{failure.source}: {failure.error}</p>)}
+                {(result.source_failures ?? []).concat(result.survey_source_failures ?? []).map((failure, index) => (
+                  <p key={`${failure.source}-${index}`}>{failure.source}: {failure.error}</p>
+                ))}
               </div>
             )}
           </section>
