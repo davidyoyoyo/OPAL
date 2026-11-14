@@ -60,8 +60,21 @@ def relevance_score(query: str, item: RawSourceItem) -> float:
     return (0.8 * title_coverage) + (0.2 * abstract_coverage)
 
 
+def _topic_aliases(terms: set[str]) -> set[str]:
+    """Expand everyday topic words into closely related subject terms."""
+    aliases = {
+        "airplane": {"airplane", "airplanes", "aeroplane", "aeroplanes", "aircraft", "aviation"},
+        "airplanes": {"airplane", "airplanes", "aeroplane", "aeroplanes", "aircraft", "aviation"},
+        "pizza": {"pizza", "pizzas"},
+    }
+    expanded = set(terms)
+    for term in terms:
+        expanded.update(aliases.get(term, set()))
+    return expanded
+
+
 def is_relevant(query: str, item: RawSourceItem) -> bool:
-    """Reject lexical false positives by requiring the actual subject to match."""
+    """Balance recall and precision for everyday-topic and research questions."""
     query_terms = _normalized_terms(query)
     if not query_terms:
         return False
@@ -69,21 +82,12 @@ def is_relevant(query: str, item: RawSourceItem) -> bool:
     title_terms = _normalized_terms(item.title)
     abstract_terms = _normalized_terms(item.abstract or "")
     all_terms = title_terms | abstract_terms
-    title_hits = len(query_terms & title_terms)
-    abstract_hits = len(query_terms & abstract_terms)
-    score = relevance_score(query, item)
 
-    prevalence_question = bool(
-        re.search(
-            r"\b(how many|what percentage|what percent|how common|do people|"
-            r"people .*\b(like|prefer|support|favor|favour)\b|"
-            r"(like|prefer|support|favor|favour))\b",
-            query,
-            re.I,
-        )
-    )
+    prevalence_question = bool(re.search(
+        r"\b(how many|what percentage|what percent|how common|do people|people .*\b(like|prefer|support|favor|favour)\b|(like|prefer|support|favor|favour))\b",
+        query, re.I
+    ))
     if prevalence_question:
-        # The subject is the key noun/topic, not generic question wording.
         topic_terms = query_terms - _OPINION_WORDS - {
             "people", "person", "how", "many", "much", "common",
             "percentage", "percent",
@@ -91,41 +95,33 @@ def is_relevant(query: str, item: RawSourceItem) -> bool:
         if not topic_terms:
             return False
 
-        matched_topics = topic_terms & all_terms
-        survey_signal_count = len(_SURVEY_SIGNALS & all_terms)
+        expanded_topics = _topic_aliases(topic_terms)
+        topic_match = bool(expanded_topics & all_terms)
+        human_opinion_signals = {
+            "survey", "poll", "respondent", "respondents", "participant",
+            "participants", "consumer", "consumers", "preference",
+            "preferences", "attitude", "attitudes", "perception",
+            "perceptions", "interest", "interests", "public", "popularity",
+            "popular", "enjoyment", "favorable", "favourable", "opinion",
+            "opinions", "support", "favor", "favour",
+        }
+        opinion_match = bool(human_opinion_signals & all_terms)
+        return topic_match and opinion_match
 
-        # A single-topic question (e.g. "How many people like pizza?")
-        # must match that exact subject in the title, not just generic abstract
-        # wording such as "what matters most" or "many students".
-        if len(topic_terms) == 1:
-            subject = next(iter(topic_terms))
-            subject_in_title = subject in title_terms
-            return subject_in_title and survey_signal_count >= 1
-
-        # For multiword topics, require most of the topic to match and a
-        # publication signal that it actually studies people's views/choices.
-        required_topic_hits = 2 if len(topic_terms) >= 3 else 1
-        return (
-            len(matched_topics) >= required_topic_hits
-            and survey_signal_count >= 1
-            and score >= 0.16
-        )
-
-    # University-choice questions need both an education-domain match and a
-    # decision/selection match. Generic shared wording is not enough.
-    education_question = bool(re.search(r"\b(ivy league|university|universit(y|ies)|college|higher education)\b", query, re.I))
-    decision_question = bool(re.search(r"\b(choos(e|ing)|choice|select(ing|ion)?|decision|what matters|important|factors?)\b", query, re.I))
+    education_question = bool(re.search(
+        r"\b(ivy league|university|universit(y|ies)|college|higher education)\b",
+        query, re.I
+    ))
+    decision_question = bool(re.search(
+        r"\b(choos(e|ing)|choice|select(ing|ion)?|decision|what matters|important|factors?)\b",
+        query, re.I
+    ))
     if education_question and decision_question:
-        domain_match = bool(_EDUCATION_TERMS & all_terms)
-        decision_match = bool(_DECISION_TERMS & all_terms)
-        return domain_match and decision_match and (title_hits >= 1 or abstract_hits >= 3)
+        return bool(_EDUCATION_TERMS & all_terms) and bool(_DECISION_TERMS & all_terms)
 
-    # General questions must match multiple substantive terms.
     topic_terms = query_terms - {"how", "many", "much", "people", "person"}
-    return bool(topic_terms) and score >= 0.16 and (
-        title_hits >= 2 or abstract_hits >= 3
-    )
-
+    expanded_topics = _topic_aliases(topic_terms)
+    return bool(topic_terms) and len(expanded_topics & all_terms) >= min(2, len(topic_terms))
 
 def _plain_abstract(value: str) -> str:
     """Remove JATS/HTML markup while retaining readable text and section labels."""
