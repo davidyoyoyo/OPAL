@@ -127,8 +127,8 @@ def extract_abstract_findings(query: str, studies: list[StudyRecord]) -> list[di
             continue
 
         sentences = [
-            part.strip(" \\t\\n.;")
-            for part in re.split(r"(?<=[.!?])\\s+(?=[A-Z0-9])", abstract)
+            part.strip(" \t\n.;")
+            for part in re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", abstract)
             if len(part.strip()) >= 35
         ]
         if not sentences:
@@ -144,7 +144,7 @@ def extract_abstract_findings(query: str, studies: list[StudyRecord]) -> list[di
 
         labelled = [
             sentence for sentence in sentences
-            if re.search(r"\\b(results?|findings?|conclusions?)\\s*[—:-]", sentence, re.I)
+            if re.search(r"\b(results?|findings?|conclusions?)\s*[—:-]", sentence, re.I)
         ]
         ranked = sorted(sentences, key=sentence_score, reverse=True)
         candidates = labelled + [s for s in ranked if s not in labelled]
