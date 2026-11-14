@@ -504,3 +504,17 @@ body, .live-workspace { background: #ffffff; }
   .findings-section { padding: 17px; }
   .findings-heading { align-items: flex-start; flex-direction: column; }
 }
+
+
+/* Replace the remaining legacy green accents in the workspace */
+.site-header { background: #ffffff; }
+.eyebrow-dot, .live-dot { background: #4f88ce; box-shadow: 0 0 0 3px #eaf2fc; }
+.type-survey { background: #eaf2fc; color: #356fba; }
+.sidebar-link.active { background: #edf4fc; color: #356fba; }
+.privacy-dot { background: #4f88ce; }
+.export-button, .small-export { border-color: #dce5f1; color: #356fba; }
+.stat-mark, .survey-icon, .text-action { color: #356fba; }
+.survey-icon { background: #eaf2fc; }
+.separation-note { color: #647d9a; }
+.evidence-badge.survey { color: #356fba; background: #eaf2fc; }
+.engine-status-dot { background: #4f88ce; }
