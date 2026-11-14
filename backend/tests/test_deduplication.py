@@ -18,6 +18,14 @@ def test_doi_normalization():
     assert normalize_doi("https://doi.org/10.1234/ABC") == "10.1234/abc"
 
 
+def test_pmid_identifier_is_used_for_cross-source_identity():
+    left = item("catalog_a", "https://a.example/study", "A paper")
+    right = item("catalog_b", "https://b.example/study", "A paper")
+    left.identifiers = {"pmid": "123456"}
+    right.identifiers = {"pmid": "PMID:123456"}
+    assert compare_records(left, right)["same_study"] is True
+
+
 def test_title_normalization():
     assert normalize_title("The Effects of Remote-Work!") == "the effects of remote work"
 
