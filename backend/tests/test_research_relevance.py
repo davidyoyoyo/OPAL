@@ -103,3 +103,29 @@ def test_pizza_paper_without_preference_or_survey_signal_is_not_prevalence_evide
         "This paper measures texture and chemical changes during baking.",
     )
     assert not is_relevant("How many people like pizza?", study)
+
+
+
+def test_airplane_preference_research_can_match_without_the_word_survey():
+    study = item(
+        "Public interest in commercial aviation",
+        "The paper examines public attitudes toward passenger aircraft and "
+        "reports participants' interest in aviation.",
+    )
+    assert is_relevant("How many people like airplanes?", study)
+
+
+def test_airplane_engineering_paper_is_not_preference_research():
+    study = item(
+        "Aerodynamic optimization of aircraft wings",
+        "This engineering paper evaluates lift, drag, and fuel efficiency.",
+    )
+    assert not is_relevant("How many people like airplanes?", study)
+
+
+def test_pizza_consumer_preference_study_is_relevant():
+    study = item(
+        "Consumer preferences for pizza toppings",
+        "Participants rated pizza options and reported their food preferences.",
+    )
+    assert is_relevant("How many people like pizza?", study)
