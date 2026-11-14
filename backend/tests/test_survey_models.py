@@ -80,3 +80,29 @@ def test_calculated_percentage_requires_a_count():
             percentage=50.0,
             percentage_method="calculated",
         )
+
+
+def test_rejects_percentages_without_question_specific_base():
+    with pytest.raises(ValidationError):
+        valid_survey(
+            base_n=None,
+            responses=[
+                response("Support", 450, 50.0),
+                response("Oppose", 450, 50.0),
+            ],
+        )
+
+
+def test_rejects_incorrectly_calculated_percentage():
+    with pytest.raises(ValidationError):
+        valid_survey(
+            responses=[
+                SurveyResponse(
+                    label="Support",
+                    count=450,
+                    percentage=45.0,
+                    percentage_method="calculated",
+                ),
+                response("Oppose", 450, 50.0),
+            ],
+        )
