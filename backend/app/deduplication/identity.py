@@ -22,19 +22,29 @@ def normalize_doi(doi: str | None) -> str | None:
 
 
 def exact_identity_key(item: RawSourceItem) -> str | None:
-    """Return a strong key only when a stable identifier is available."""
-    doi = normalize_doi(item.doi)
+    """Use globally meaningful identifiers; provider-local IDs are not cross-site identity."""
+    doi = normalize_doi(item.doi or item.identifiers.get("doi"))
     if doi:
         return f"doi:{doi}"
+
+    for identifier_type in ("pmid", "pmcid", "arxiv", "openalex"):
+        identifier = item.identifiers.get(identifier_type)
+        if identifier:
+            normalized = identifier.strip().lower()
+            if identifier_type == "arxiv":
+                normalized = re.sub(r"^https?://arxiv\.org/abs/", "", normalized)
+            normalized = re.sub(rf"^{identifier_type}:\s*", "", normalized)
+            if normalized:
+                return f"{identifier_type}:{normalized}"
     return None
 
 
 def compare_records(left: RawSourceItem, right: RawSourceItem) -> dict[str, float | str | bool]:
     """Score possible duplicates. Similarity is a review signal, not proof."""
-    left_doi = normalize_doi(left.doi)
-    right_doi = normalize_doi(right.doi)
-    if left_doi and right_doi and left_doi == right_doi:
-        return {"same_study": True, "confidence": 1.0, "reason": "matching_doi"}
+    left_key = exact_identity_key(left)
+    right_key = exact_identity_key(right)
+    if left_key and right_key and left_key == right_key:
+        return {"same_study": True, "confidence": 1.0, "reason": "matching_identifier"}
 
     left_title = normalize_title(left.title)
     right_title = normalize_title(right.title)
