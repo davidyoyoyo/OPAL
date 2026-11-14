@@ -14,5 +14,6 @@ class EvidenceSynthesis(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     overview: str = Field(min_length=20, max_length=1200)
+    overview_source_ids: list[str] = Field(min_length=1, max_length=20)
     key_points: list[EvidenceSynthesisPoint] = Field(default_factory=list, max_length=5)
     limitations: list[str] = Field(default_factory=list, max_length=8)
