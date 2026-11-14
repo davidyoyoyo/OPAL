@@ -145,7 +145,9 @@ CREATE TABLE response_distributions (
     source_note TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CHECK (response_count IS NOT NULL OR reported_percentage IS NOT NULL)
+    CHECK (response_count IS NOT NULL OR reported_percentage IS NOT NULL OR calculated_percentage IS NOT NULL),
+    CHECK (percentage_basis <> 'reported' OR reported_percentage IS NOT NULL),
+    CHECK (percentage_basis <> 'calculated' OR calculated_percentage IS NOT NULL)
 );
 CREATE INDEX response_distributions_option_idx ON response_distributions(answer_option_id);
 
