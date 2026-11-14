@@ -35,8 +35,7 @@ _CHOICE_WORDS = {"choose", "choosing", "choice", "choices", "select", "selecting
 _OPINION_WORDS = {"like", "likes", "liked", "liking", "love", "loves", "loved", "prefer", "prefers", "preference", "preferences", "support", "favor", "favour", "attitude", "attitudes", "opinion", "opinions", "feel", "feeling", "enjoy", "enjoys", "enjoyed"}
 _SURVEY_SIGNALS = {"survey", "poll", "respondent", "respondents", "participant", "participants", "consumer", "consumers", "questionnaire", "sample"}
 _PREVALENCE_MEASURE_SIGNALS = {
-    "percentage", "percent", "proportion", "prevalence", "majority", "minority",
-    "distribution", "frequency", "count", "number", "share", "most", "half",
+    "majority", "minority", "most", "half", "one-third", "one-quarter",
 }
 _EXPLANATORY_SIGNALS = {
     "sensory", "taste", "flavor", "flavour", "texture", "sweetness", "aroma",
