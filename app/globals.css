@@ -561,3 +561,22 @@ body, .live-workspace { background: #ffffff; }
 .evidence-brief-list li p { margin: 0; color: #43556c; font-size: 13px; line-height: 1.8; }
 .evidence-brief-list li a { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; color: #356fba; font-size: 10px; font-weight: 700; }
 .evidence-brief-card .finding-limitation { margin-top: 20px; padding-top: 13px; border-top: 1px solid #edf1f6; }
+
+
+/* Cross-study synthesis */
+.evidence-brief-overview {
+  margin: 12px 0 4px;
+  color: #2e4057;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.evidence-point-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.evidence-point-sources a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
