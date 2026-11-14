@@ -108,7 +108,7 @@ def extract_abstract_findings(query: str, studies: list[StudyRecord]) -> list[di
     Extract traceable abstract passages, not inferred survey outcomes.
     Each displayed passage is copied from the source abstract after markup cleanup.
     """
-    query_terms = _terms(query)
+    query_terms = _normalized_terms(query)
     findings: list[dict] = []
 
     for study in studies:
@@ -136,9 +136,11 @@ def extract_abstract_findings(query: str, studies: list[StudyRecord]) -> list[di
         if query_terms:
             matching = [
                 sentence for sentence in candidates
-                if len(query_terms & _terms(sentence)) >= 2
+                if len(query_terms & _normalized_terms(sentence)) >= 2
             ]
-            candidates = matching or candidates
+            candidates = matching
+            if not candidates:
+                continue
 
         excerpt = " ".join(candidates[:3]).strip()
         if len(excerpt) > 900:
