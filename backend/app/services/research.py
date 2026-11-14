@@ -61,11 +61,11 @@ def _normalized_terms(text: str) -> set[str]:
 
 def _is_prevalence_question(query: str) -> bool:
     return bool(re.search(
-        r"\\b(how many|what percentage|what percent|how common|how widespread|"
-        r"what share|what proportion|do people|what number of)\\b",
+        r"\b(how many|what percentage|what percent|how common|how widespread|"
+        r"what share|what proportion|do people|what number of)\b",
         query, re.I
     )) or bool(re.search(
-        r"\\b(people|consumers|adults|respondents)\\b.*\\b(like|love|prefer|support|favor|favour|enjoy)\\b",
+        r"\b(people|consumers|adults|respondents)\b.*\b(like|love|prefer|support|favor|favour|enjoy)\b",
         query, re.I
     ))
 
@@ -102,8 +102,8 @@ def classify_relevance(query: str, item: RawSourceItem) -> str | None:
         has_opinion_outcome = bool(_OPINION_WORDS & all_terms)
         has_reported_measure = (
             bool(_PREVALENCE_MEASURE_SIGNALS & all_terms)
-            or bool(re.search(r"\\b\\d+(?:\\.\\d+)?\\s*%", abstract_text))
-            or bool(re.search(r"\\b(\\d+|one|two|three|four|five|six|seven|eight|nine|ten)\\s+of\\s+(the\\s+)?(respondents|participants|consumers)\\b", abstract_text, re.I))
+            or bool(re.search(r"\b\d+(?:\.\d+)?\s*%", abstract_text))
+            or bool(re.search(r"\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+of\s+(the\s+)?(respondents|participants|consumers)\b", abstract_text, re.I))
         )
         if has_survey_context and has_opinion_outcome and has_reported_measure:
             return "direct_answer"
@@ -119,11 +119,11 @@ def classify_relevance(query: str, item: RawSourceItem) -> str | None:
         return None
 
     education_question = bool(re.search(
-        r"\\b(ivy league|university|universit(y|ies)|college|higher education)\\b",
+        r"\b(ivy league|university|universit(y|ies)|college|higher education)\b",
         query, re.I
     ))
     decision_question = bool(re.search(
-        r"\\b(choos(e|ing)|choice|select(ing|ion)?|decision|what matters|important|factors?)\\b",
+        r"\b(choos(e|ing)|choice|select(ing|ion)?|decision|what matters|important|factors?)\b",
         query, re.I
     ))
     if education_question and decision_question:
