@@ -51,11 +51,25 @@ def build_extractive_synthesis(
     from each paper. Every point remains attached to the exact source record.
     This is deliberately not presented as a pooled or causal conclusion.
     """
+    prevalence_question = bool(re.search(
+        r"\\b(how many|what percentage|what percent|how common|how widespread|what share|what proportion)\\b",
+        query, re.I
+    )) or bool(re.search(
+        r"\\b(people|consumers|adults|respondents)\\b.*\\b(like|love|prefer|support|favor|favour|enjoy)\\b",
+        query, re.I
+    ))
+    # A prevalence question is not answered by generic product research. The
+    # evidence brief may explain preference drivers, but must not pretend to
+    # estimate how many people hold that preference.
+    synthesis_findings = (
+        [item for item in findings if item.get("evidence_role") == "explanatory_context"]
+        if prevalence_question else findings
+    )
     query_terms = _tokens(query)
     candidates: list[dict[str, Any]] = []
     abstract_count = 0
 
-    for finding in findings:
+    for finding in synthesis_findings:
         source_text = str(finding.get("evidence_text") or finding.get("summary") or "")
         sentences = _sentences(source_text)
         if not sentences:
@@ -112,14 +126,24 @@ def build_extractive_synthesis(
         used_sentences.add(normalized)
 
     study_count = len(findings)
-    overview = (
-        f"OPAL found {study_count} relevant scholarly record"
-        f"{'' if study_count == 1 else 's'}; {abstract_count} "
-        f"{'contains' if abstract_count == 1 else 'contain'} usable abstract text. "
-        "The points below are selected from result-oriented passages across the available "
-        "abstracts, with each passage linked to its study. They are not a pooled estimate, "
-        "a ranking of causes, or a representative measure of public opinion."
-    )
+    if prevalence_question:
+        overview = (
+            f"OPAL found {study_count} topic-matched scholarly record"
+            f"{'' if study_count == 1 else 's'}. "
+            f"{abstract_count} explanatory record"
+            f"{'' if abstract_count == 1 else 's'} contained usable abstract text about consumer "
+            "preferences or sensory factors. These findings may help explain reported preferences, "
+            "but they do not tell us what percentage of the general population likes the product."
+        )
+    else:
+        overview = (
+            f"OPAL found {study_count} relevant scholarly record"
+            f"{'' if study_count == 1 else 's'}; {abstract_count} "
+            f"{'contains' if abstract_count == 1 else 'contain'} usable abstract text. "
+            "The points below are selected from result-oriented passages across the available "
+            "abstracts, with each passage linked to its study. They are not a pooled estimate, "
+            "a ranking of causes, or a representative measure of public opinion."
+        )
     return {
         "mode": "extractive_fallback",
         "overview": overview,
