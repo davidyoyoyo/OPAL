@@ -328,7 +328,7 @@ async def run_research(query: str, registry: SourceRegistry) -> dict:
     return {
         "status": "completed" if relevant_records else "no_results",
         "query": query,
-        "studies": [study.model_dump(mode="json") for study in studies],
+        "studies": [{**study.model_dump(mode="json"), "evidence_role": next((relevance_by_title.get(item.title) for item in relevant_records if item.title == study.title), None)} for study in studies],
         "findings": findings,
         # No survey connector currently supplies validated distributions. Keep
         # this empty until source adapters return question-level survey data.
