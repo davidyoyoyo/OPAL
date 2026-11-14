@@ -8,9 +8,12 @@ class SurveySourceRegistry:
         self._adapters: dict[str, SurveySourceAdapter] = {}
 
     def register(self, adapter: SurveySourceAdapter) -> None:
-        if adapter.name in self._adapters:
-            raise ValueError(f"Survey source '{adapter.name}' is already registered.")
-        self._adapters[adapter.name] = adapter
+        key = adapter.name.strip().lower()
+        if not key:
+            raise ValueError("A survey source adapter must have a name.")
+        if key in self._adapters:
+            raise ValueError(f"Survey source '{key}' is already registered.")
+        self._adapters[key] = adapter
 
     def get_all(self) -> list[SurveySourceAdapter]:
         return list(self._adapters.values())
