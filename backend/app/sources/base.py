@@ -19,6 +19,7 @@ class RawSourceItem(BaseModel):
     title: str
     abstract: str | None = None
     doi: str | None = None
+    identifiers: dict[str, str] = Field(default_factory=dict)
     publication_year: int | None = None
     authors: list[str] = Field(default_factory=list)
     raw_metadata: dict = Field(default_factory=dict)
