@@ -5,7 +5,6 @@ from app.core.config import settings
 from app.services.research import run_research
 from app.sources.registry import source_registry
 from app.sources.providers.crossref import CrossrefAdapter
-from app.sources.providers.openalex import OpenAlexAdapter
 from app.sources.providers.eurostat import EurostatAdapter
 
 
@@ -21,7 +20,6 @@ app.add_middleware(
 # Providers are registered here; the orchestration pipeline does not depend on
 # any provider-specific implementation.
 source_registry.register(CrossrefAdapter())
-source_registry.register(OpenAlexAdapter())
 source_registry.register(EurostatAdapter())
 
 
