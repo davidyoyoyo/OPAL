@@ -1,11 +1,24 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from app.core.config import settings
 from app.services.research import run_research
 from app.sources.registry import source_registry
+from app.sources.providers.crossref import CrossrefAdapter
 
 
 app = FastAPI(title=settings.app_name, version=settings.api_version)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
+
+# Providers are registered here; the orchestration pipeline does not depend on
+# any provider-specific implementation.
+source_registry.register(CrossrefAdapter())
 
 
 class ResearchRequest(BaseModel):
