@@ -36,8 +36,8 @@ def _sentences(text: str) -> list[str]:
     cleaned = re.sub(r"<[^>]+>", " ", text)
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return [
-        part.strip(" \\t\\n.;")
-        for part in re.split(r"(?<=[.!?])\\s+(?=[A-Z0-9])", cleaned)
+        part.strip(" \t\n.;")
+        for part in re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", cleaned)
         if len(part.strip()) >= 55
     ]
 
@@ -66,7 +66,7 @@ def build_extractive_synthesis(
             terms = _tokens(sentence)
             result_hits = len(terms & _RESULT_SIGNALS)
             topic_hits = len(terms & query_terms)
-            number_bonus = 1 if re.search(r"\\b\\d+(?:\\.\\d+)?%?\\b", sentence) else 0
+            number_bonus = 1 if re.search(r"\b\d+(?:\.\d+)?%?\b", sentence) else 0
             intro_penalty = 2 if re.match(
                 r"^(this study|the present study|this paper|the aim|the purpose|we investigate|we examine)",
                 sentence, re.I
