@@ -21,6 +21,15 @@ def test_prevalence_question_requires_a_reported_measure_for_direct_answer():
     assert classify_relevance("How many people like ice cream?", study) == "direct_answer"
 
 
+def test_survey_mention_without_a_reported_quantity_is_not_a_direct_answer():
+    study = item(
+        "Consumer attitudes toward ice cream",
+        "A survey found that respondents generally liked ice cream.",
+    )
+
+    assert classify_relevance("How many people like ice cream?", study) is None
+
+
 def test_prevalence_question_keeps_consumer_sensory_research_as_context():
     study = item(
         "Sensory acceptance of ice cream",
@@ -68,3 +77,19 @@ def test_prevalence_synthesis_uses_explanatory_findings_not_direct_estimates_as_
     assert result["key_points"]
     assert all(point["source_ids"] == ["context"] for point in result["key_points"])
     assert "do not tell us what percentage" in result["overview"]
+
+
+def test_prevalence_fallback_does_not_turn_a_direct_measure_into_reasons():
+    result = build_extractive_synthesis(
+        "How many people like ice cream?",
+        [{
+            "id": "direct",
+            "source_title": "Popularity survey",
+            "source_url": "https://example.org/survey",
+            "evidence_role": "direct_answer",
+            "evidence_text": "A survey found that 72% of respondents liked ice cream.",
+        }],
+    )
+
+    assert result["key_points"] == []
+    assert "0 explanatory records" in result["overview"]
