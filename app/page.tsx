@@ -15,7 +15,6 @@ import {
   LockKeyhole,
   Search,
   ShieldCheck,
-  Sparkles,
   Upload,
 } from "lucide-react";
 
@@ -72,11 +71,10 @@ export default function Home() {
 
       <section className="hero">
         <div className="hero-copy">
-          <div className="eyebrow"><span className="eyebrow-dot" /> THE OPINION RESEARCH ENGINE</div>
-          <h1>Make sense of<br />what people <em>think.</em></h1>
+          <div className="eyebrow"><span className="eyebrow-dot" /> PUBLIC OPINION RESEARCH</div>
+          <h1>Find the evidence<br />behind what people <em>think.</em></h1>
           <p className="hero-description">
-            Ask a question. OPAL gathers evidence from surveys, research and public
-            discussions, then turns it into structured data you can actually use.
+            Search across surveys, studies and public discussions. Compare what each source actually says, inspect its methodology and export the evidence.
           </p>
 
           <form className="question-card" onSubmit={handleSubmit}>
@@ -92,7 +90,7 @@ export default function Home() {
               rows={2}
             />
             <div className="question-footer">
-              <span className="input-hint"><Sparkles size={14} /> Natural language research</span>
+              <span className="input-hint">Search across research sources</span>
               <button className="submit-button" type="submit" disabled={!question.trim()}>
                 Start research <ArrowRight size={16} />
               </button>
@@ -123,8 +121,8 @@ export default function Home() {
 
         <div className="preview-wrap">
           <div className="preview-topline">
-            <span><span className="live-dot" /> A LOOK INSIDE OPAL</span>
-            <span className="preview-tag">ILLUSTRATIVE PREVIEW</span>
+            <span><span className="live-dot" /> A SAMPLE RESEARCH OUTPUT</span>
+            <span className="preview-tag">INTERFACE CONCEPT</span>
           </div>
           <div className="results-window">
             <div className="window-header">
@@ -180,7 +178,7 @@ export default function Home() {
           </div>
           <div className="preview-caption">
             <div className="caption-icon"><BarChart3 size={17} /></div>
-            <span><strong>From question to usable data.</strong> Charts, evidence and exportable tables in one place.</span>
+            <span><strong>Evidence you can inspect.</strong> Traceable sources, comparable findings and exportable tables.</span>
           </div>
         </div>
       </section>
