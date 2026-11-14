@@ -550,3 +550,14 @@ body, .live-workspace { background: #ffffff; }
 .methodology-result-card h4 { margin: 2px 0 5px; color: #2c4059; font-size: 12px; }
 .methodology-result-card p { margin: 0; color: #718198; font-size: 11px; line-height: 1.65; }
 @media (max-width: 650px) { .survey-data-section, .methodology-results-section { padding: 17px; } }
+
+
+/* One combined evidence brief instead of separate abstract cards */
+.evidence-brief-card { padding: 20px 22px; border: 1px solid #e4ebf4; border-radius: 15px; background: #fff; }
+.evidence-brief-label { color: #356fba; font-size: 10px; font-weight: 800; letter-spacing: .06em; }
+.evidence-brief-list { display: grid; gap: 17px; margin: 17px 0 0; padding-left: 20px; }
+.evidence-brief-list li { padding-left: 5px; color: #356fba; }
+.evidence-brief-list li::marker { font-size: 13px; }
+.evidence-brief-list li p { margin: 0; color: #43556c; font-size: 13px; line-height: 1.8; }
+.evidence-brief-list li a { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; color: #356fba; font-size: 10px; font-weight: 700; }
+.evidence-brief-card .finding-limitation { margin-top: 20px; padding-top: 13px; border-top: 1px solid #edf1f6; }
