@@ -67,18 +67,14 @@ class EurostatAdapter(SourceAdapter):
             end = (row.get("data end") or "").strip()
             updated = (row.get("last update of data") or "").strip()
             value_count = (row.get("values") or "").strip()
-            description_parts = [
-                "Eurostat catalogue entry; this is dataset metadata, not a result.",
-                f"Data coverage: {start or 'not stated'} to {end or 'not stated'}.",
-                f"Last data update: {updated or 'not stated'}.",
-            ]
             records.append(
                 RawSourceItem(
                     provider=self.name,
                     provider_record_id=code,
                     url=self.browser_url.format(code=code),
                     title=title,
-                    abstract=" ".join(description_parts),
+                    # Catalogue descriptions are metadata, not evidence findings.
+                    abstract=None,
                     identifiers={"eurostat_code": code},
                     raw_metadata={
                         "dataset_code": code,
