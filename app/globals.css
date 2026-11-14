@@ -518,3 +518,11 @@ body, .live-workspace { background: #ffffff; }
 .separation-note { color: #647d9a; }
 .evidence-badge.survey { color: #356fba; background: #eaf2fc; }
 .engine-status-dot { background: #4f88ce; }
+
+
+.findings-intro { margin: -5px 0 17px; color: #687b92; font-size: 12px; line-height: 1.7; }
+.finding-card-topline { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 9px; color: #8997a8; font-size: 10px; }
+.finding-type { color: #356fba; font-weight: 750; letter-spacing: .07em; }
+.finding-card h4 { margin: 0 0 12px; color: #26364b; font-size: 14px; line-height: 1.5; }
+.finding-excerpt { margin: 0; padding: 13px 15px; border-left: 3px solid #8db3e2; border-radius: 0 10px 10px 0; background: #f4f8fd; color: #43556c; font-size: 13px; line-height: 1.8; }
+.finding-limitation { margin: 10px 0 0; color: #8995a4; font-size: 10px; line-height: 1.6; }
