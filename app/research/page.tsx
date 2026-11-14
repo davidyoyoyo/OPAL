@@ -211,7 +211,11 @@ export default function ResearchPage() {
                 </div>
               ) : (
                 <div className="findings-empty">
-                  <strong>No measured-opinion source is connected.</strong>
+                  <strong>
+                    {result.survey_data_status?.status === "not_connected"
+                      ? "No measured-opinion source is connected."
+                      : "No matching measured-opinion results were returned."}
+                  </strong>
                   <p>{result.survey_data_status?.message ?? "This search returned no original survey question and response distribution. OPAL will not manufacture percentages from scholarly abstracts."}</p>
                 </div>
               )}
