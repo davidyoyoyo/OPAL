@@ -46,7 +46,7 @@ type ResearchResult = {
   unique_studies?: number;
   candidate_records_screened?: number;
   relevant_source_records?: number;
-  findings?: { id: string; title: string; evidence_text: string; source_title: string; source_url: string; publication_year: number | null; evidence_type: string; evidence_level: string; interpretation: string }[];
+  findings?: { id: string; title: string; summary?: string; evidence_text: string; source_title: string; source_url: string; publication_year: number | null; evidence_type: string; evidence_level: string; interpretation: string }[];
   survey_results?: SurveyResult[];
   abstracts_with_evidence?: number;
 };
@@ -59,6 +59,7 @@ export default function ResearchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [visibleFindings, setVisibleFindings] = useState(3);
+  const [visibleStudies, setVisibleStudies] = useState(3);
   const [visibleMethodology, setVisibleMethodology] = useState(3);
 
   async function runResearch(nextQuestion: string) {
@@ -69,6 +70,7 @@ export default function ResearchPage() {
     setError("");
     setResult(null);
     setVisibleFindings(3);
+    setVisibleStudies(3);
     setVisibleMethodology(3);
 
     try {
@@ -166,8 +168,8 @@ export default function ResearchPage() {
             <section className="survey-data-section">
               <div className="findings-heading">
                 <div>
-                  <div className="live-kicker">MEASURED OPINIONS</div>
-                  <h3>Survey data</h3>
+                  <div className="live-kicker">SURVEY MEASUREMENTS</div>
+                  <h3>Measured opinions</h3>
                 </div>
                 <span className="findings-count">{result.survey_results?.length ?? 0} datasets</span>
               </div>
@@ -197,8 +199,8 @@ export default function ResearchPage() {
                 </div>
               ) : (
                 <div className="findings-empty">
-                  <strong>No direct survey results are available for this question yet.</strong>
-                  <p>The current connector searches scholarly publication metadata; it does not yet retrieve question-level survey response counts. OPAL will show percentages, counts and respondent bases here only when a survey source provides them. It will not estimate public opinion from unrelated papers or abstracts.</p>
+                  <strong>No measured opinion data is connected yet.</strong>
+                  <p>This search currently uses Crossref, which indexes scholarly publications but does not provide the underlying survey response tables. Counts, percentages and charts will appear here once OPAL connects to survey repositories and retrieves the original question, respondent base and response distribution. We will not manufacture percentages from abstracts.</p>
                 </div>
               )}
             </section>
@@ -214,17 +216,17 @@ export default function ResearchPage() {
               {result.findings && result.findings.length > 0 ? (
                 <>
                   <p className="findings-intro">
-                    OPAL found {result.findings.length} source-backed abstract passage{result.findings.length === 1 ? "" : "s"} in the matching studies below. These are extracted passages, not invented summaries or population-wide survey estimates.
+                    These are concise summaries of what the matching publications report in their abstracts. Each is linked to its source; they are not independently verified survey estimates.
                   </p>
                   <div className="findings-list">
                     {result.findings.slice(0, visibleFindings).map((finding) => (
                       <article className="finding-card" key={finding.id}>
                         <div className="finding-card-topline">
-                          <span className="finding-type">SUPPORTING RESEARCH · ABSTRACT</span>
+                          <span className="finding-type">ABSTRACT-BASED SUMMARY</span>
                           {finding.publication_year && <span>{finding.publication_year}</span>}
                         </div>
                         <h4>{finding.source_title}</h4>
-                        <blockquote className="finding-excerpt">{finding.evidence_text}</blockquote>
+                        <p className="finding-excerpt">{finding.summary ?? finding.evidence_text}</p>
                         <p className="finding-limitation">{finding.interpretation}</p>
                         {finding.source_url && (
                           <a href={finding.source_url} target="_blank" rel="noreferrer">
@@ -291,8 +293,17 @@ export default function ResearchPage() {
             {result.studies.length === 0 && !result.message && <div className="live-empty">No publication records were returned. Try a broader topic or different wording.</div>}
 
             {result.studies.length > 0 && (
-              <div className="study-list">
-                {result.studies.map((study, index) => (
+              <section className="relevant-studies-section">
+                <div className="findings-heading">
+                  <div>
+                    <div className="live-kicker">SOURCE RECORDS</div>
+                    <h3>Relevant studies</h3>
+                  </div>
+                  <span className="findings-count">{result.studies.length} found</span>
+                </div>
+                <p className="findings-intro">All {result.studies.length} relevant studies returned by the connected sources are included below. Use the controls to expand the list.</p>
+                <div className="study-list">
+                {result.studies.slice(0, visibleStudies).map((study, index) => (
                   <article className="study-row" key={study.doi ?? `${study.title}-${index}`}>
                     <div className="study-number">{String(index + 1).padStart(2, "0")}</div>
                     <div className="study-main">
@@ -317,7 +328,17 @@ export default function ResearchPage() {
                     </div>
                   </article>
                 ))}
-              </div>
+                </div>
+                {result.studies.length > 3 && visibleStudies < result.studies.length && (
+                  <div className="reveal-controls">
+                    {visibleStudies === 3 ? (
+                      <button type="button" onClick={() => setVisibleStudies(5)}>Show more studies</button>
+                    ) : (
+                      <button type="button" onClick={() => setVisibleStudies(result.studies.length)}>Show all {result.studies.length} studies</button>
+                    )}
+                  </div>
+                )}
+              </section>
             )}
 
             {result.duplicate_candidates.length > 0 && (
