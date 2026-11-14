@@ -61,12 +61,18 @@ class SurveyQuestionResult(BaseModel):
     def validate_question_metadata(self):
         if self.sample_size is not None and self.base_n is not None and self.base_n > self.sample_size:
             raise ValueError("Question base cannot exceed the total sample size.")
+        if self.base_n is None and any(response.percentage is not None for response in self.responses):
+            raise ValueError("Percentages require the denominator for this exact survey question.")
         if self.fieldwork_start and self.fieldwork_end and self.fieldwork_start > self.fieldwork_end:
             raise ValueError("Fieldwork start cannot be after fieldwork end.")
         if self.base_n is not None:
             for response in self.responses:
                 if response.count is not None and response.count > self.base_n:
                     raise ValueError("A response count cannot exceed the question-specific base.")
+                if response.percentage_method == "calculated":
+                    expected = round((response.count / self.base_n) * 100, 1)
+                    if response.percentage is None or abs(response.percentage - expected) > 0.11:
+                        raise ValueError("Calculated percentage does not match count / question base.")
 
         if self.distribution_complete:
             if any(response.percentage is None for response in self.responses):
