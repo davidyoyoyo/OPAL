@@ -59,7 +59,50 @@ async def research(request: ResearchRequest) -> dict:
     question = request.question.strip()
     if not question:
         raise HTTPException(status_code=422, detail="Question cannot be empty.")
-    return await run_research(question, source_registry)
+
+    # AI enriches the research record, but the original question remains the
+    # retrieval query so a model cannot silently redirect the search.
+    result = await run_research(question, source_registry)
+    result["ai_processing"] = {"status": "not_configured"}
+
+    try:
+        ai_service = create_ai_service_from_env()
+    except ValueError:
+        result["ai_processing"] = {"status": "configuration_error"}
+        return result
+
+    if ai_service is None:
+        return result
+
+    try:
+        plan = await ai_service.interpret_question(question)
+        result["research_plan"] = plan.model_dump()
+        result["ai_processing"] = {
+            "status": "question_interpreted",
+            "evidence_items_interpreted": 0,
+        }
+
+        # Limit inference calls per visitor request. Only abstract-derived
+        # findings are interpreted; the AI does not create survey statistics.
+        for finding in result.get("findings", [])[:5]:
+            interpretation = await ai_service.interpret_evidence(
+                finding.get("evidence_text") or finding.get("summary") or "",
+                {
+                    "provider": "crossref",
+                    "source_title": finding.get("source_title"),
+                    "source_url": finding.get("source_url"),
+                    "publication_year": finding.get("publication_year"),
+                    "evidence_level": finding.get("evidence_level"),
+                },
+            )
+            finding["ai_interpretation"] = interpretation.model_dump()
+            result["ai_processing"]["evidence_items_interpreted"] += 1
+    except AIInterpretationError:
+        # Research results remain available if the optional AI provider is
+        # temporarily unavailable or returns invalid structured output.
+        result["ai_processing"]["status"] = "partial_failure"
+
+    return result
 
 
 @app.post("/ai/interpret-question")
