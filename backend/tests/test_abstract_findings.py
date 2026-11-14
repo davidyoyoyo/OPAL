@@ -26,7 +26,8 @@ def test_extracts_traceable_passage_from_abstract():
     findings = extract_abstract_findings("renewable energy policy", [record])
 
     assert len(findings) == 1
-    assert "Most respondents supported renewable energy policy" in findings[0]["evidence_text"]
+    assert "Most respondents supported renewable energy policy" in findings[0]["summary"]
+    assert findings[0]["title"] == "Abstract-based summary"
     assert findings[0]["source_title"] == record.title
     assert findings[0]["source_url"] == "https://doi.org/10.1000/example"
     assert findings[0]["evidence_level"] == "abstract"
