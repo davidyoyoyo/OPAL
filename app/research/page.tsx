@@ -62,6 +62,7 @@ type ResearchResult = {
     limitations: string[];
   };
   survey_data_status?: { status: string; message: string };
+  ai_processing?: { status: string; synthesis?: string };
 };
 
 const API_URL = process.env.NEXT_PUBLIC_OPAL_API_URL ?? "http://127.0.0.1:8000";
@@ -229,7 +230,7 @@ export default function ResearchPage() {
                   <p className="findings-intro">
                     {result.evidence_synthesis?.mode === "ai_synthesis"
                       ? "A cross-study synthesis of the retrieved abstracts. Each key point is linked to the source records that support it."
-                      : "A transparent extractive brief selecting result-oriented passages across the abstracts, rather than repeating each paper's opening sentence. It does not claim a pooled result."}
+                      : `AI synthesis is ${result.ai_processing?.status === "not_configured" ? "not configured" : "unavailable for this request"}. This fallback selects result-oriented passages across the abstracts instead of repeating opening sentences; it does not claim a pooled result.`}
                   </p>
                   <article className="evidence-brief-card">
                     <div className="evidence-brief-label">
