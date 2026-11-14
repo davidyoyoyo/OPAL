@@ -1,4 +1,4 @@
-from app.services.synthesis import build_extractivesynthesis
+from app.services.synthesis import build_extractive_synthesis
 
 
 def test_extracts_result_sentences_across_studies_not_first_sentences():
@@ -25,7 +25,7 @@ def test_extracts_result_sentences_across_studies_not_first_sentences():
         },
     ]
 
-    result = build_extractivesynthesis("public transport satisfaction", findings)
+    result = build_extractive_synthesis("public transport satisfaction", findings)
 
     assert result["mode"] == "extractive_fallback"
     assert len(result["key_points"]) >= 2
@@ -38,6 +38,6 @@ def test_extracts_result_sentences_across_studies_not_first_sentences():
 
 
 def test_empty_findings_produce_transparent_overview():
-    result = build_extractivesynthesis("public opinion", [])
+    result = build_extractive_synthesis("public opinion", [])
     assert result["key_points"] == []
     assert "0 relevant scholarly records" in result["overview"]
