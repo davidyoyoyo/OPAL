@@ -32,8 +32,19 @@ def _terms(text: str) -> set[str]:
 
 
 _CHOICE_WORDS = {"choose", "choosing", "choice", "choices", "select", "selecting", "selection", "selections"}
-_OPINION_WORDS = {"like", "likes", "love", "prefer", "prefers", "preference", "preferences", "support", "favor", "favour", "attitude", "attitudes", "opinion", "opinions", "feel", "feeling"}
-_SURVEY_SIGNALS = {"survey", "poll", "respondent", "respondents", "participant", "participants", "preference", "preferences", "attitude", "attitudes", "consumer", "consumers", "support", "favor", "favour"}
+_OPINION_WORDS = {"like", "likes", "liked", "liking", "love", "loves", "loved", "prefer", "prefers", "preference", "preferences", "support", "favor", "favour", "attitude", "attitudes", "opinion", "opinions", "feel", "feeling", "enjoy", "enjoys", "enjoyed"}
+_SURVEY_SIGNALS = {"survey", "poll", "respondent", "respondents", "participant", "participants", "consumer", "consumers", "questionnaire", "sample"}
+_PREVALENCE_MEASURE_SIGNALS = {
+    "percentage", "percent", "proportion", "prevalence", "majority", "minority",
+    "distribution", "frequency", "count", "number", "share", "reported",
+}
+_EXPLANATORY_SIGNALS = {
+    "sensory", "taste", "flavor", "flavour", "texture", "sweetness", "aroma",
+    "color", "colour", "creaminess", "acceptance", "acceptability", "liking",
+    "hedonic", "organoleptic", "preference", "preferences", "factor", "factors",
+    "motivation", "motivations", "reason", "reasons", "purchase", "consumption",
+    "quality", "price", "availability",
+}
 _EDUCATION_TERMS = {"ivy", "league", "university", "universities", "college", "colleges", "student", "students", "education", "admission", "admissions", "campus", "institution", "institutions", "higher"}
 _DECISION_TERMS = {"choice", "decision", "factor", "factors", "important", "importance", "criteria", "select", "selection"}
 
@@ -48,80 +59,83 @@ def _normalized_terms(text: str) -> set[str]:
     return normalized
 
 
-def relevance_score(query: str, item: RawSourceItem) -> float:
-    """A conservative lexical score; shared generic wording is not enough."""
-    query_terms = _normalized_terms(query)
-    if not query_terms:
-        return 1.0
-    title_terms = _normalized_terms(item.title)
-    abstract_terms = _normalized_terms(item.abstract or "")
-    title_coverage = len(query_terms & title_terms) / len(query_terms)
-    abstract_coverage = len(query_terms & abstract_terms) / len(query_terms)
-    return (0.8 * title_coverage) + (0.2 * abstract_coverage)
-
-
-def _topic_aliases(terms: set[str]) -> set[str]:
-    """Expand everyday topic words into closely related subject terms."""
-    aliases = {
-        "airplane": {"airplane", "airplanes", "aeroplane", "aeroplanes", "aircraft", "aviation"},
-        "airplanes": {"airplane", "airplanes", "aeroplane", "aeroplanes", "aircraft", "aviation"},
-        "pizza": {"pizza", "pizzas"},
-    }
-    expanded = set(terms)
-    for term in terms:
-        expanded.update(aliases.get(term, set()))
-    return expanded
-
-
-def is_relevant(query: str, item: RawSourceItem) -> bool:
-    """Balance recall and precision for everyday-topic and research questions."""
-    query_terms = _normalized_terms(query)
-    if not query_terms:
-        return False
-
-    title_terms = _normalized_terms(item.title)
-    abstract_terms = _normalized_terms(item.abstract or "")
-    all_terms = title_terms | abstract_terms
-
-    prevalence_question = bool(re.search(
-        r"\b(how many|what percentage|what percent|how common|do people|people .*\b(like|prefer|support|favor|favour)\b|(like|prefer|support|favor|favour))\b",
+def _is_prevalence_question(query: str) -> bool:
+    return bool(re.search(
+        r"\\b(how many|what percentage|what percent|how common|how widespread|"
+        r"what share|what proportion|do people|what number of)\\b",
+        query, re.I
+    )) or bool(re.search(
+        r"\\b(people|consumers|adults|respondents)\\b.*\\b(like|love|prefer|support|favor|favour|enjoy)\\b",
         query, re.I
     ))
-    if prevalence_question:
+
+
+def classify_relevance(query: str, item: RawSourceItem) -> str | None:
+    """Return direct_answer, explanatory_context, or None using question intent.
+
+    For prevalence questions, topical overlap alone is insufficient: direct
+    evidence must report a measured opinion, while explanatory studies must
+    actually examine consumer preferences or reasons.
+    """
+    query_terms = _normalized_terms(query)
+    if not query_terms:
+        return None
+
+    title_terms = _normalized_terms(item.title)
+    abstract_text = item.abstract or ""
+    abstract_terms = _normalized_terms(abstract_text)
+    all_terms = title_terms | abstract_terms
+
+    if _is_prevalence_question(query):
         topic_terms = query_terms - _OPINION_WORDS - {
-            "people", "person", "how", "many", "much", "common",
-            "percentage", "percent",
+            "people", "person", "consumers", "consumer", "adults", "respondents",
+            "how", "many", "much", "common", "widespread", "percentage",
+            "percent", "share", "proportion", "number",
         }
         if not topic_terms:
-            return False
+            return None
+        topic_match = bool(_topic_aliases(topic_terms) & all_terms)
+        if not topic_match:
+            return None
 
-        expanded_topics = _topic_aliases(topic_terms)
-        topic_match = bool(expanded_topics & all_terms)
-        human_opinion_signals = {
-            "survey", "poll", "respondent", "respondents", "participant",
-            "participants", "consumer", "consumers", "preference",
-            "preferences", "attitude", "attitudes", "perception",
-            "perceptions", "interest", "interests", "public", "popularity",
-            "popular", "enjoyment", "favorable", "favourable", "opinion",
-            "opinions", "support", "favor", "favour",
-        }
-        opinion_match = bool(human_opinion_signals & all_terms)
-        return topic_match and opinion_match
+        has_survey_context = bool(_SURVEY_SIGNALS & all_terms)
+        has_opinion_outcome = bool(_OPINION_WORDS & all_terms)
+        has_reported_measure = (
+            bool(_PREVALENCE_MEASURE_SIGNALS & all_terms)
+            or bool(re.search(r"\\b\\d+(?:\\.\\d+)?\\s*%", abstract_text))
+            or bool(re.search(r"\\b(\\d+|one|two|three|four|five|six|seven|eight|nine|ten)\\s+of\\s+(the\\s+)?(respondents|participants|consumers)\\b", abstract_text, re.I))
+        )
+        if has_survey_context and has_opinion_outcome and has_reported_measure:
+            return "direct_answer"
+
+        has_consumer_research_context = bool(
+            {"consumer", "consumers", "respondent", "respondents", "participant",
+             "participants", "sensory", "organoleptic", "hedonic", "taste",
+             "acceptance", "acceptability"} & all_terms
+        )
+        has_preference_or_sensory_focus = bool(_EXPLANATORY_SIGNALS & all_terms)
+        if has_consumer_research_context and has_preference_or_sensory_focus:
+            return "explanatory_context"
+        return None
 
     education_question = bool(re.search(
-        r"\b(ivy league|university|universit(y|ies)|college|higher education)\b",
+        r"\\b(ivy league|university|universit(y|ies)|college|higher education)\\b",
         query, re.I
     ))
     decision_question = bool(re.search(
-        r"\b(choos(e|ing)|choice|select(ing|ion)?|decision|what matters|important|factors?)\b",
+        r"\\b(choos(e|ing)|choice|select(ing|ion)?|decision|what matters|important|factors?)\\b",
         query, re.I
     ))
     if education_question and decision_question:
-        return bool(_EDUCATION_TERMS & all_terms) and bool(_DECISION_TERMS & all_terms)
+        return "direct_answer" if bool(_EDUCATION_TERMS & all_terms) and bool(_DECISION_TERMS & all_terms) else None
 
     topic_terms = query_terms - {"how", "many", "much", "people", "person"}
     expanded_topics = _topic_aliases(topic_terms)
-    return bool(topic_terms) and len(expanded_topics & all_terms) >= min(2, len(topic_terms))
+    return "direct_answer" if topic_terms and len(expanded_topics & all_terms) >= min(2, len(topic_terms)) else None
+
+
+def is_relevant(query: str, item: RawSourceItem) -> bool:
+    return classify_relevance(query, item) is not None
 
 def _plain_abstract(value: str) -> str:
     """Remove JATS/HTML markup while retaining readable text and section labels."""
@@ -291,9 +305,24 @@ async def run_research(query: str, registry: SourceRegistry) -> dict:
             continue
         candidate_records.extend(result)
 
-    relevant_records = [item for item in candidate_records if is_relevant(query, item)]
+    relevance_by_title = {
+        item.title: classify_relevance(query, item)
+        for item in candidate_records
+    }
+    relevant_records = [
+        item for item in candidate_records
+        if relevance_by_title.get(item.title) is not None
+    ]
+    # Direct-answer studies appear before explanatory context in the workspace.
+    relevant_records.sort(
+        key=lambda item: 0 if relevance_by_title.get(item.title) == "direct_answer" else 1
+    )
     studies = group_source_records(relevant_records)
     findings = extract_abstract_findings(query, studies)
+    for finding in findings:
+        finding["evidence_role"] = relevance_by_title.get(
+            finding.get("source_title"), "explanatory_context"
+        )
     duplicate_candidates = find_duplicate_candidates(relevant_records)
 
     return {
