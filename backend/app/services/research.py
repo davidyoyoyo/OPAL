@@ -305,10 +305,15 @@ async def run_research(query: str, registry: SourceRegistry) -> dict:
             continue
         candidate_records.extend(result)
 
-    relevance_by_title = {
-        item.title: classify_relevance(query, item)
-        for item in candidate_records
-    }
+    relevance_by_title: dict[str, str] = {}
+    for item in candidate_records:
+        role = classify_relevance(query, item)
+        if role is None:
+            continue
+        # If duplicate provider records share a title, retain the strongest
+        # relevance classification rather than whichever provider ran last.
+        if relevance_by_title.get(item.title) != "direct_answer" or role == "direct_answer":
+            relevance_by_title[item.title] = role
     relevant_records = [
         item for item in candidate_records
         if relevance_by_title.get(item.title) is not None
