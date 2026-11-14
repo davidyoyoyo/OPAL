@@ -11,6 +11,7 @@ type Study = {
   authors: string[];
   abstract: string | null;
   identity_status: "verified" | "probable" | "unresolved";
+  evidence_role?: "direct_answer" | "explanatory_context" | null;
   locations: { provider: string; url: string; provider_record_id: string | null }[];
 };
 
@@ -47,7 +48,7 @@ type ResearchResult = {
   unique_studies?: number;
   candidate_records_screened?: number;
   relevant_source_records?: number;
-  findings?: { id: string; title: string; summary?: string; evidence_text: string; source_title: string; source_url: string; publication_year: number | null; evidence_type: string; evidence_level: string; interpretation: string }[];
+  findings?: { id: string; title: string; summary?: string; evidence_text: string; source_title: string; source_url: string; publication_year: number | null; evidence_type: string; evidence_level: string; evidence_role?: string; interpretation: string }[];
   survey_results?: SurveyResult[];
   abstracts_with_evidence?: number;
   evidence_synthesis?: {
@@ -299,6 +300,67 @@ export default function ResearchPage() {
               )}
             </section>
 
+
+
+            {result.message && <div className="live-empty">{result.message}</div>}
+            {result.studies.length === 0 && !result.message && <div className="live-empty">No publication records were returned. Try a broader topic or different wording.</div>}
+
+            {result.studies.length > 0 && (
+              <section className="relevant-studies-section">
+                <div className="findings-heading">
+                  <div>
+                    <div className="live-kicker">SOURCE RECORDS</div>
+                    <h3>Relevant studies</h3>
+                  </div>
+                  <span className="findings-count">{result.studies.length} found</span>
+                </div>
+                <p className="findings-intro">Studies are screened against the intent of your question, not just topic overlap. Direct-answer evidence is shown before studies that only provide explanatory context.</p>
+                <div className="study-list">
+                {result.studies.slice(0, visibleStudies).map((study, index) => (
+                  <article className="study-row" key={study.doi ?? `${study.title}-${index}`}>
+                    <div className="study-number">{String(index + 1).padStart(2, "0")}</div>
+                    <div className="study-main">
+                      <h3>{study.title}</h3>
+                      <p className="study-meta">
+                        {study.authors.slice(0, 4).join(", ")}
+                        {study.authors.length > 4 ? " et al." : ""}
+                        {study.publication_year ? ` · ${study.publication_year}` : ""}
+                      </p>
+                      {study.abstract && <p className="study-abstract">{study.abstract.replace(/<[^>]*>/g, "").slice(0, 420)}{study.abstract.length > 420 ? "…" : ""}</p>}
+                      {study.evidence_role && (
+                        <span className="study-relevance-label">
+                          {study.evidence_role === "direct_answer"
+                            ? "Direct-answer evidence"
+                            : "Explanatory context · does not measure overall popularity"}
+                        </span>
+                      )}
+                      {study.doi && <span className="study-doi">DOI: {study.doi}</span>}
+                      <div className="study-locations">
+                        {study.locations.map((location) => (
+                          <a href={location.url} key={location.url} target="_blank" rel="noreferrer">
+                            {location.provider} <ExternalLink size={12} />
+                          </a>
+                        ))}
+                        <span className={study.identity_status === "verified" ? "identity-verified" : "identity-unresolved"}>
+                          {study.identity_status === "verified" ? "Identifier verified" : "Identity not yet verified"}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+                </div>
+                {result.studies.length > 3 && visibleStudies < result.studies.length && (
+                  <div className="reveal-controls">
+                    {visibleStudies === 3 ? (
+                      <button type="button" onClick={() => setVisibleStudies(5)}>Show more studies</button>
+                    ) : (
+                      <button type="button" onClick={() => setVisibleStudies(result.studies.length)}>Show all {result.studies.length} studies</button>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+
             <section className="methodology-results-section">
               <div className="findings-heading">
                 <div>
@@ -333,58 +395,6 @@ export default function ResearchPage() {
                 </div>
               )}
             </section>
-
-            {result.message && <div className="live-empty">{result.message}</div>}
-            {result.studies.length === 0 && !result.message && <div className="live-empty">No publication records were returned. Try a broader topic or different wording.</div>}
-
-            {result.studies.length > 0 && (
-              <section className="relevant-studies-section">
-                <div className="findings-heading">
-                  <div>
-                    <div className="live-kicker">SOURCE RECORDS</div>
-                    <h3>Relevant studies</h3>
-                  </div>
-                  <span className="findings-count">{result.studies.length} found</span>
-                </div>
-                <p className="findings-intro">All {result.studies.length} relevant studies returned by the connected sources are included below. Use the controls to expand the list.</p>
-                <div className="study-list">
-                {result.studies.slice(0, visibleStudies).map((study, index) => (
-                  <article className="study-row" key={study.doi ?? `${study.title}-${index}`}>
-                    <div className="study-number">{String(index + 1).padStart(2, "0")}</div>
-                    <div className="study-main">
-                      <h3>{study.title}</h3>
-                      <p className="study-meta">
-                        {study.authors.slice(0, 4).join(", ")}
-                        {study.authors.length > 4 ? " et al." : ""}
-                        {study.publication_year ? ` · ${study.publication_year}` : ""}
-                      </p>
-                      {study.abstract && <p className="study-abstract">{study.abstract.replace(/<[^>]*>/g, "").slice(0, 420)}{study.abstract.length > 420 ? "…" : ""}</p>}
-                      {study.doi && <span className="study-doi">DOI: {study.doi}</span>}
-                      <div className="study-locations">
-                        {study.locations.map((location) => (
-                          <a href={location.url} key={location.url} target="_blank" rel="noreferrer">
-                            {location.provider} <ExternalLink size={12} />
-                          </a>
-                        ))}
-                        <span className={study.identity_status === "verified" ? "identity-verified" : "identity-unresolved"}>
-                          {study.identity_status === "verified" ? "Identifier verified" : "Identity not yet verified"}
-                        </span>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-                </div>
-                {result.studies.length > 3 && visibleStudies < result.studies.length && (
-                  <div className="reveal-controls">
-                    {visibleStudies === 3 ? (
-                      <button type="button" onClick={() => setVisibleStudies(5)}>Show more studies</button>
-                    ) : (
-                      <button type="button" onClick={() => setVisibleStudies(result.studies.length)}>Show all {result.studies.length} studies</button>
-                    )}
-                  </div>
-                )}
-              </section>
-            )}
 
             {result.duplicate_candidates.length > 0 && (
               <section className="duplicate-review">
