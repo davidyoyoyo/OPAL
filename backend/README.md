@@ -33,7 +33,13 @@ This prevents the same paper mirrored across several websites from being counted
 
 ## Current scope
 
-This is the first engine foundation: API routes, a connector contract, a registry, provider-neutral records and conservative DOI-based deduplication. It does not yet connect to external research websites or produce real findings. No placeholder result is returned as research.
+The engine currently registers three discovery connectors:
+
+- **Crossref** — scholarly metadata. Abstracts can be copyrighted even though most bibliographic metadata is reusable.
+- **OpenAlex** — scholarly metadata released under CC0. The adapter deliberately does not copy abstracts; it stores bibliographic metadata and links so OPAL can check the licence of the actual work before using its text.
+- **Eurostat** — official dataset catalogue discovery. Returned records are dataset descriptions, not extracted statistical values. Eurostat is a supporting-statistics source, not a general public-opinion poll provider.
+
+These connectors discover sources. They do not yet extract question-level survey distributions or calculate population opinion estimates. The survey-results array therefore remains empty until a source provides validated question-level data.
 
 
 ## Database setup
@@ -72,3 +78,44 @@ For a lightweight model smoke test, the test suite creates the SQLAlchemy
 metadata against in-memory SQLite. PostgreSQL-specific behavior (including
 the production migration) still needs to be checked against a real PostgreSQL
 instance before deployment.
+
+
+## Connected providers and configuration
+
+All provider calls are made by the backend; API keys must never be placed in frontend code.
+
+### OpenAlex
+
+- Base endpoint: `https://api.openalex.org/works`
+- No key is required for basic use.
+- Current free-key allowance: **$1 of API usage per day**, reset at midnight UTC. The keyless allowance is **$0.10/day**.
+- Request speed: **10 requests/second without a key; 30 requests/second with a free key**. Some expensive query types have lower limits.
+- Search budget at the published example costs: approximately **1,000 search calls/day** on a free key, or **10,000 list/filter calls/day**. Costs depend on endpoint/query type.
+- Page size maximum: **100**. Basic page-number pagination stops at **10,000 results**; cursor paging requires a key.
+- Data licence: OpenAlex metadata is CC0. The adapter does not copy abstracts or full text; those may have separate rights at the work level.
+- Optional environment variable: `OPAL_OPENALEX_API_KEY`.
+
+Get a free key at https://openalex.org/ after creating an account and verifying the email address. The connector works without it, but the free key increases the daily budget. Do not commit the key to Git.
+
+### Eurostat
+
+- Public REST and catalogue APIs; no API key or registration is required.
+- Eurostat describes the APIs as free of charge. Its public documentation does not state a fixed numeric requests-per-second quota. It does apply fair-use controls to large/repeated extractions; some requests can be queued and processed asynchronously.
+- Statistical data may generally be reused commercially with source attribution, subject to dataset-specific notices and listed exceptions. The connector currently discovers catalogue entries only.
+- Eurostat updates datasets twice daily when new data or structural changes are available.
+- No environment variable is required.
+
+### Crossref
+
+- No API key is required.
+- Current documented limits: public pool **5 requests/second, 1 concurrent request**; polite pool **10 requests/second, 3 concurrent requests**; Plus pool **150 requests/second** with no stated concurrency cap.
+- Almost all bibliographic metadata is reusable; abstracts may remain copyrighted by publishers/authors.
+- Set `OPAL_CROSSREF_MAILTO` to a real contact email to use the polite pool. No daily request quota is published in the current limit table.
+
+### Not enabled
+
+- **European Social Survey (ESS):** free access is for non-commercial use; commercial use is generally not allowed except case-by-case. That does not meet OPAL's intended public/commercial compatibility requirement.
+- **World Values Survey (WVS):** its download conditions limit use to non-profit purposes and prohibit redistribution of the data files.
+- **Eurobarometer via GESIS:** microdata downloads are free after registration, but the available documentation does not by itself clearly grant OPAL the right to republish or commercially use the microdata. Keep it out of automated ingestion until GESIS confirms those rights in writing.
+
+Do not treat an API being free to access as permission to republish its underlying survey data. For every survey provider, OPAL must record the exact dataset licence and distinguish permission to publish derived aggregate statistics from permission to redistribute raw microdata.
