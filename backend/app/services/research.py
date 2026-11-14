@@ -75,7 +75,7 @@ def is_relevant(query: str, item: RawSourceItem) -> bool:
 
     prevalence_question = bool(
         re.search(
-            r"\\b(how many|what percentage|what percent|how common|do people|"
+            r"\b(how many|what percentage|what percent|how common|do people|"
             r"people .*\\b(like|prefer|support|favor|favour)\\b|"
             r"(like|prefer|support|favor|favour))\\b",
             query,
@@ -113,8 +113,8 @@ def is_relevant(query: str, item: RawSourceItem) -> bool:
 
     # University-choice questions need both an education-domain match and a
     # decision/selection match. Generic shared wording is not enough.
-    education_question = bool(re.search(r"\\b(ivy league|university|universit(y|ies)|college|higher education)\\b", query, re.I))
-    decision_question = bool(re.search(r"\\b(choos(e|ing)|choice|select(ing|ion)?|decision|what matters|important|factors?)\\b", query, re.I))
+    education_question = bool(re.search(r"\b(ivy league|university|universit(y|ies)|college|higher education)\\b", query, re.I))
+    decision_question = bool(re.search(r"\b(choos(e|ing)|choice|select(ing|ion)?|decision|what matters|important|factors?)\\b", query, re.I))
     if education_question and decision_question:
         domain_match = bool(_EDUCATION_TERMS & all_terms)
         decision_match = bool(_DECISION_TERMS & all_terms)
