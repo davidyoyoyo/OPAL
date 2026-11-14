@@ -48,7 +48,7 @@ def test_sentence_splitter_separates_sentences_and_preserves_result_passage():
     from app.services.synthesis import _sentences
 
     sentences = _sentences(
-        "This study examines attitudes toward buses. "
+        "This study examines attitudes toward public buses in several large cities. "
         "Respondents reported higher satisfaction with reliable services."
     )
 
