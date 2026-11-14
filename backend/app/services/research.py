@@ -17,8 +17,10 @@ _STOPWORDS = {
     "those", "through", "under", "until", "very", "was", "were", "what", "when",
     "where", "which", "while", "who", "will", "with", "would", "your",
     "care", "cum", "ce", "cea", "cei", "cele", "din", "despre", "este",
+    "how", "many", "much", "percentage", "percent", "common", "often",
+    "like", "likes", "love", "loves", "prefer", "prefers", "people", "person",
     "sunt", "pentru", "prin", "mai", "mult", "sau", "dar", "consider", "think",
-    "people", "opinion", "opinions", "view", "views",
+    "opinion", "opinions", "view", "views",
 }
 
 
@@ -59,6 +61,7 @@ def relevance_score(query: str, item: RawSourceItem) -> float:
 
 
 def is_relevant(query: str, item: RawSourceItem) -> bool:
+    """Reject lexical false positives by requiring the actual subject to match."""
     query_terms = _normalized_terms(query)
     if not query_terms:
         return False
@@ -70,29 +73,58 @@ def is_relevant(query: str, item: RawSourceItem) -> bool:
     abstract_hits = len(query_terms & abstract_terms)
     score = relevance_score(query, item)
 
-    # Prevalence / preference questions need evidence about people's views or
-    # measured behaviour, not merely a paper that happens to mention the object.
     prevalence_question = bool(
-        re.search(r"\b(how many|what percentage|what percent|how common|do people|people .*\b(like|prefer|support|favor|favour)\b|\b(like|prefer|support|favor|favour)\b)\b", query, re.I)
+        re.search(
+            r"\\b(how many|what percentage|what percent|how common|do people|"
+            r"people .*\\b(like|prefer|support|favor|favour)\\b|"
+            r"(like|prefer|support|favor|favour))\\b",
+            query,
+            re.I,
+        )
     )
     if prevalence_question:
-        topic_terms = query_terms - _OPINION_WORDS - {"people", "person"}
-        topic_hits = len(topic_terms & all_terms)
-        survey_signal = bool(_SURVEY_SIGNALS & all_terms)
-        return topic_hits >= 2 and survey_signal and score >= 0.12
+        # The subject is the key noun/topic, not generic question wording.
+        topic_terms = query_terms - _OPINION_WORDS - {
+            "people", "person", "how", "many", "much", "common",
+            "percentage", "percent",
+        }
+        if not topic_terms:
+            return False
+
+        matched_topics = topic_terms & all_terms
+        survey_signal_count = len(_SURVEY_SIGNALS & all_terms)
+
+        # A single-topic question (e.g. "How many people like pizza?")
+        # must match that exact subject in the title, not just generic abstract
+        # wording such as "what matters most" or "many students".
+        if len(topic_terms) == 1:
+            subject = next(iter(topic_terms))
+            subject_in_title = subject in title_terms
+            return subject_in_title and survey_signal_count >= 1
+
+        # For multiword topics, require most of the topic to match and a
+        # publication signal that it actually studies people's views/choices.
+        required_topic_hits = 2 if len(topic_terms) >= 3 else 1
+        return (
+            len(matched_topics) >= required_topic_hits
+            and survey_signal_count >= 1
+            and score >= 0.16
+        )
 
     # University-choice questions need both an education-domain match and a
-    # decision/selection match. "Choosing" or "matters" alone cannot qualify.
-    education_question = bool(re.search(r"\b(ivy league|university|universit(y|ies)|college|higher education)\b", query, re.I))
-    decision_question = bool(re.search(r"\b(choos(e|ing)|choice|select(ing|ion)?|decision|what matters|important|factors?)\b", query, re.I))
+    # decision/selection match. Generic shared wording is not enough.
+    education_question = bool(re.search(r"\\b(ivy league|university|universit(y|ies)|college|higher education)\\b", query, re.I))
+    decision_question = bool(re.search(r"\\b(choos(e|ing)|choice|select(ing|ion)?|decision|what matters|important|factors?)\\b", query, re.I))
     if education_question and decision_question:
         domain_match = bool(_EDUCATION_TERMS & all_terms)
         decision_match = bool(_DECISION_TERMS & all_terms)
         return domain_match and decision_match and (title_hits >= 1 or abstract_hits >= 3)
 
-    # For other questions, demand multiple independent topic matches. A single
-    # shared word such as "ice cream" or "patients choosing" is insufficient.
-    return score >= 0.16 and (title_hits >= 2 or abstract_hits >= 3)
+    # General questions must match multiple substantive terms.
+    topic_terms = query_terms - {"how", "many", "much", "people", "person"}
+    return bool(topic_terms) and score >= 0.16 and (
+        title_hits >= 2 or abstract_hits >= 3
+    )
 
 
 def _plain_abstract(value: str) -> str:
