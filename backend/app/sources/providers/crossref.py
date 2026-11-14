@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 import httpx
 from app.sources.base import RawSourceItem, SourceAdapter, SourceQuery
@@ -24,11 +25,15 @@ class CrossrefAdapter(SourceAdapter):
             }
         ) or request.query
         headers = {"User-Agent": "OPALResearch/0.2 (research discovery prototype)"}
+        mailto = os.getenv("OPAL_CROSSREF_MAILTO")
+        params_common = {"rows": request.limit}
+        if mailto:
+            params_common["mailto"] = mailto
         async with httpx.AsyncClient(timeout=20.0, headers=headers) as client:
             responses = await asyncio.gather(
                 client.get(self.endpoint, params={
                     "query.bibliographic": topic_query,
-                    "rows": request.limit,
+                    **params_common,
                     "select": "DOI,title,author,published,published-print,published-online,abstract,URL,type",
                 }),
                 client.get(self.endpoint, params={
