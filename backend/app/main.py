@@ -146,6 +146,7 @@ async def research(request: ResearchRequest) -> dict:
                     "publication_year": item.get("publication_year"),
                     "passage": str(item.get("evidence_text") or item.get("summary") or "")[:2500],
                     "evidence_level": item.get("evidence_level"),
+                    "evidence_role": item.get("evidence_role"),
                 }
                 for item in findings[:20]
             ]
