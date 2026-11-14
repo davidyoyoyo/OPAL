@@ -31,3 +31,37 @@ def test_survey_registry_rejects_duplicate_names():
     registry.register(FakeSurveySource())
     with pytest.raises(ValueError):
         registry.register(FakeSurveySource())
+
+
+def test_survey_search_reports_not_connected_without_adapters():
+    import asyncio
+
+    from app.services.survey_research import run_survey_search
+    from app.sources.survey_base import SurveyQuery
+
+    result = asyncio.run(
+        run_survey_search(SurveyQuery(question="Do people support public transport?"), SurveySourceRegistry())
+    )
+    assert result["status"] == "not_connected"
+    assert result["results"] == []
+
+
+def test_survey_search_keeps_source_failures_separate():
+    import asyncio
+
+    from app.services.survey_research import run_survey_search
+    from app.sources.survey_base import SurveyQuery
+
+    class BrokenSource(FakeSurveySource):
+        name = "broken-surveys"
+
+        async def search(self, query):
+            raise RuntimeError("temporary outage")
+
+    registry = SurveySourceRegistry()
+    registry.register(BrokenSource())
+    result = asyncio.run(
+        run_survey_search(SurveyQuery(question="Do people support public transport?"), registry)
+    )
+    assert result["status"] == "no_results"
+    assert result["source_failures"][0]["source"] == "broken-surveys"
