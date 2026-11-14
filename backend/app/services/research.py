@@ -92,7 +92,7 @@ def is_relevant(query: str, item: RawSourceItem) -> bool:
 
     # For other questions, demand multiple independent topic matches. A single
     # shared word such as "ice cream" or "patients choosing" is insufficient.
-    return score >= 0.28 and (title_hits >= 2 or (title_hits >= 1 and abstract_hits >= 3))
+    return score >= 0.16 and (title_hits >= 2 or abstract_hits >= 3)
 
 
 def _plain_abstract(value: str) -> str:
