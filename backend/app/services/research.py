@@ -32,7 +32,7 @@ def _terms(text: str) -> set[str]:
 
 
 _CHOICE_WORDS = {"choose", "choosing", "choice", "choices", "select", "selecting", "selection", "selections"}
-_OPINION_WORDS = {"like", "likes", "liked", "liking", "love", "loves", "loved", "prefer", "prefers", "preference", "preferences", "support", "favor", "favour", "attitude", "attitudes", "opinion", "opinions", "feel", "feeling", "enjoy", "enjoys", "enjoyed"}
+_OPINION_WORDS = {"like", "likes", "liked", "liking", "love", "loves", "loved", "prefer", "prefers", "preference", "preferences", "support", "favor", "favour", "attitude", "attitudes", "opinion", "opinions", "feel", "feeling", "enjoy", "enjoys", "enjoyed", "interest", "interests", "interested"}
 _SURVEY_SIGNALS = {"survey", "poll", "respondent", "respondents", "participant", "participants", "consumer", "consumers", "questionnaire", "sample"}
 _PREVALENCE_MEASURE_SIGNALS = {
     "majority", "minority", "most", "half", "one-third", "one-quarter",
@@ -42,7 +42,7 @@ _EXPLANATORY_SIGNALS = {
     "color", "colour", "creaminess", "acceptance", "acceptability", "liking",
     "hedonic", "organoleptic", "preference", "preferences", "factor", "factors",
     "motivation", "motivations", "reason", "reasons", "purchase", "consumption",
-    "quality", "price", "availability",
+    "quality", "price", "availability", "interest", "interests", "interested",
 }
 _EDUCATION_TERMS = {"ivy", "league", "university", "universities", "college", "colleges", "student", "students", "education", "admission", "admissions", "campus", "institution", "institutions", "higher"}
 _DECISION_TERMS = {"choice", "decision", "factor", "factors", "important", "importance", "criteria", "select", "selection"}
@@ -85,7 +85,7 @@ def _normalized_terms(text: str) -> set[str]:
 def is_prevalence_question(query: str) -> bool:
     return bool(re.search(
         r"\b(how many|what percentage|what percent|how common|how widespread|"
-        r"what share|what proportion|do people|what number of)\b",
+        r"what share|what proportion|what number of)\b",
         query, re.I
     )) or bool(re.search(
         r"\b(people|consumers|adults|respondents)\b.*\b(like|love|prefer|support|favor|favour|enjoy)\b",
