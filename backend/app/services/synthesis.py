@@ -123,6 +123,11 @@ def build_extractive_synthesis(
     return {
         "mode": "extractive_fallback",
         "overview": overview,
+        "overview_source_ids": [
+            str(item.get("id") or item.get("source_url") or item.get("source_title") or "")
+            for item in findings[:20]
+            if item.get("id") or item.get("source_url") or item.get("source_title")
+        ],
         "key_points": selected,
         "limitations": [
             "Abstracts are summaries written by the study authors; full methods and results may not be available here.",
