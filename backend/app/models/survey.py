@@ -25,8 +25,8 @@ class SurveyResponse(BaseModel):
     def validate_percentage_provenance(self):
         if self.count is None and self.percentage is None:
             raise ValueError("A response must include a count or a percentage.")
-        if self.percentage_method == "calculated" and self.count is None:
-            raise ValueError("Calculated percentages require an original response count.")
+        if self.percentage_method == "calculated" and (self.count is None or self.percentage is None):
+            raise ValueError("Calculated percentages require an original response count and a calculated value.")
         if self.percentage_method == "source_reported" and self.percentage is None:
             raise ValueError("Source-reported percentages must include the reported percentage.")
         if self.percentage_method == "not_reported" and self.percentage is not None:
