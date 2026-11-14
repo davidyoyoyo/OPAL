@@ -36,7 +36,7 @@ _OPINION_WORDS = {"like", "likes", "liked", "liking", "love", "loves", "loved", 
 _SURVEY_SIGNALS = {"survey", "poll", "respondent", "respondents", "participant", "participants", "consumer", "consumers", "questionnaire", "sample"}
 _PREVALENCE_MEASURE_SIGNALS = {
     "percentage", "percent", "proportion", "prevalence", "majority", "minority",
-    "distribution", "frequency", "count", "number", "share", "majority", "minority", "most", "half",
+    "distribution", "frequency", "count", "number", "share", "most", "half",
 }
 _EXPLANATORY_SIGNALS = {
     "sensory", "taste", "flavor", "flavour", "texture", "sweetness", "aroma",
@@ -59,7 +59,7 @@ def _normalized_terms(text: str) -> set[str]:
     return normalized
 
 
-def _is_prevalence_question(query: str) -> bool:
+def is_prevalence_question(query: str) -> bool:
     return bool(re.search(
         r"\b(how many|what percentage|what percent|how common|how widespread|"
         r"what share|what proportion|do people|what number of)\b",
@@ -86,7 +86,7 @@ def classify_relevance(query: str, item: RawSourceItem) -> str | None:
     abstract_terms = _normalized_terms(abstract_text)
     all_terms = title_terms | abstract_terms
 
-    if _is_prevalence_question(query):
+    if is_prevalence_question(query):
         topic_terms = query_terms - _OPINION_WORDS - {
             "people", "person", "consumers", "consumer", "adults", "respondents",
             "how", "many", "much", "common", "widespread", "percentage",
@@ -104,6 +104,7 @@ def classify_relevance(query: str, item: RawSourceItem) -> str | None:
             bool(_PREVALENCE_MEASURE_SIGNALS & all_terms)
             or bool(re.search(r"\b\d+(?:\.\d+)?\s*%", abstract_text))
             or bool(re.search(r"\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+of\s+(the\s+)?(respondents|participants|consumers)\b", abstract_text, re.I))
+            or bool(re.search(r"\b\d+\s+(respondents|participants|consumers)\b", abstract_text, re.I))
         )
         if has_survey_context and has_opinion_outcome and has_reported_measure:
             return "direct_answer"
