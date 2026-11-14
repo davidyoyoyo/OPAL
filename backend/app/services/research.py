@@ -73,7 +73,7 @@ def is_relevant(query: str, item: RawSourceItem) -> bool:
     # Prevalence / preference questions need evidence about people's views or
     # measured behaviour, not merely a paper that happens to mention the object.
     prevalence_question = bool(
-        re.search(r"\\b(how many|what percentage|what percent|how common|do people|people .*\\b(like|prefer|support|favor|favour)\\b|\\b(like|prefer|support|favor|favour)\\b)\\b", query, re.I)
+        re.search(r"\b(how many|what percentage|what percent|how common|do people|people .*\\b(like|prefer|support|favor|favour)\\b|\\b(like|prefer|support|favor|favour)\\b)\\b", query, re.I)
     )
     if prevalence_question:
         topic_terms = query_terms - _OPINION_WORDS - {"people", "person"}
@@ -83,8 +83,8 @@ def is_relevant(query: str, item: RawSourceItem) -> bool:
 
     # University-choice questions need both an education-domain match and a
     # decision/selection match. "Choosing" or "matters" alone cannot qualify.
-    education_question = bool(re.search(r"\\b(ivy league|university|universit(y|ies)|college|higher education)\\b", query, re.I))
-    decision_question = bool(re.search(r"\\b(choos(e|ing)|choice|select(ing|ion)?|decision|what matters|important|factors?)\\b", query, re.I))
+    education_question = bool(re.search(r"\b(ivy league|university|universit(y|ies)|college|higher education)\\b", query, re.I))
+    decision_question = bool(re.search(r"\b(choos(e|ing)|choice|select(ing|ion)?|decision|what matters|important|factors?)\\b", query, re.I))
     if education_question and decision_question:
         domain_match = bool(_EDUCATION_TERMS & all_terms)
         decision_match = bool(_DECISION_TERMS & all_terms)
@@ -136,7 +136,7 @@ def extract_abstract_findings(query: str, studies: list[StudyRecord]) -> list[di
         if query_terms:
             matching = [
                 sentence for sentence in candidates
-                if len(query_terms & _terms(sentence)) > 0
+                if len(query_terms & _terms(sentence)) >= 2
             ]
             candidates = matching or candidates
 
