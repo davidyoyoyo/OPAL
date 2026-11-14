@@ -1,5 +1,6 @@
 import asyncio
 
+from app.models.survey import SurveyQuestionResult
 from app.sources.survey_base import SurveyQuery
 from app.sources.survey_registry import SurveySourceRegistry
 
@@ -28,9 +29,14 @@ async def run_survey_search(query: SurveyQuery, registry: SurveySourceRegistry) 
         if isinstance(response, Exception):
             failures.append({"source": adapter.name, "error": str(response)})
             continue
-        for item in response:
-            # The model validates every record before it can reach the UI.
-            results.append(item.model_dump(mode="json"))
+        try:
+            for item in response[:query.limit]:
+                # Validate every provider payload before it can reach the UI.
+                validated = SurveyQuestionResult.model_validate(item)
+                results.append(validated.model_dump(mode="json"))
+        except Exception as exc:
+            failures.append({"source": adapter.name, "error": str(exc)})
+            results = [item for item in results if item.get("source_name") != adapter.name]
 
     return {
         "status": "completed" if results else "no_results",
