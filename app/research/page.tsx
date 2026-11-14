@@ -150,7 +150,7 @@ export default function ResearchPage() {
                   <div className="live-kicker">RESEARCH FINDINGS</div>
                   <h3>What the evidence tells us</h3>
                 </div>
-                <span className="findings-count">{result.findings?.length ?? 0} extracted findings</span>
+                <span className="findings-count">{result.findings?.length ?? 0} abstract passages</span>
               </div>
               {result.findings && result.findings.length > 0 ? (
                 <>
