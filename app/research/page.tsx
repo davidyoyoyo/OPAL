@@ -53,6 +53,7 @@ type ResearchResult = {
   evidence_synthesis?: {
     mode: "ai_synthesis" | "extractive_fallback";
     overview: string;
+    overview_source_ids: string[];
     key_points: {
       text: string;
       source_ids: string[];
@@ -244,6 +245,18 @@ export default function ResearchPage() {
                     <p className="evidence-brief-overview">
                       {result.evidence_synthesis?.overview ?? "Relevant abstracts were found, but no synthesis was returned."}
                     </p>
+                    {(result.evidence_synthesis?.overview_source_ids ?? []).length > 0 && (
+                      <div className="evidence-point-sources evidence-overview-sources">
+                        {(result.evidence_synthesis?.overview_source_ids ?? [])
+                          .map((sourceId) => result.findings?.find((finding) => finding.id === sourceId))
+                          .filter((finding): finding is NonNullable<ResearchResult["findings"]>[number] => Boolean(finding))
+                          .map((study) => (
+                            <a href={study.source_url} key={study.id} target="_blank" rel="noreferrer">
+                              {study.source_title}{study.publication_year ? ` · ${study.publication_year}` : ""} <ExternalLink size={12} />
+                            </a>
+                          ))}
+                      </div>
+                    )}
                     {result.evidence_synthesis?.key_points?.length ? (
                       <ul className="evidence-brief-list">
                         {result.evidence_synthesis.key_points.map((point, index) => {
