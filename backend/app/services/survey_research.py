@@ -30,13 +30,14 @@ async def run_survey_search(query: SurveyQuery, registry: SurveySourceRegistry) 
             failures.append({"source": adapter.name, "error": str(response)})
             continue
         try:
+            source_results = []
             for item in response[:query.limit]:
                 # Validate every provider payload before it can reach the UI.
                 validated = SurveyQuestionResult.model_validate(item)
-                results.append(validated.model_dump(mode="json"))
+                source_results.append(validated.model_dump(mode="json"))
+            results.extend(source_results)
         except Exception as exc:
             failures.append({"source": adapter.name, "error": str(exc)})
-            results = [item for item in results if item.get("source_name") != adapter.name]
 
     return {
         "status": "completed" if results else "no_results",
