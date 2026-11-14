@@ -105,11 +105,19 @@ def _plain_abstract(value: str) -> str:
 
 def extract_abstract_findings(query: str, studies: list[StudyRecord]) -> list[dict]:
     """
-    Extract traceable abstract passages, not inferred survey outcomes.
-    Each displayed passage is copied from the source abstract after markup cleanup.
+    Build concise, traceable summaries from the result-oriented sentences in
+    study abstracts. These summaries describe what the abstract reports; they
+    are not independent verification or population-level survey estimates.
     """
     query_terms = _normalized_terms(query)
     findings: list[dict] = []
+    result_signals = {
+        "result", "results", "finding", "findings", "found", "showed", "shows",
+        "reported", "reports", "increased", "decreased", "higher", "lower",
+        "associated", "association", "significant", "majority", "percent",
+        "percentage", "participants", "respondents", "concluded", "conclusion",
+        "suggest", "suggests", "indicate", "indicates",
+    }
 
     for study in studies:
         if not study.abstract:
@@ -119,46 +127,56 @@ def extract_abstract_findings(query: str, studies: list[StudyRecord]) -> list[di
             continue
 
         sentences = [
-            part.strip(" \t\n.;")
-            for part in re.split(r"(?<=[.!?])\s+(?=[A-Z0-9])", abstract)
+            part.strip(" \\t\\n.;")
+            for part in re.split(r"(?<=[.!?])\\s+(?=[A-Z0-9])", abstract)
             if len(part.strip()) >= 35
         ]
         if not sentences:
             sentences = [abstract]
 
-        # Prefer explicitly labelled Results/Conclusion passages when Crossref
-        # preserves structured abstract headings.
+        # A sentence explicitly marked Results/Findings/Conclusion is a strong
+        # candidate. Otherwise rank sentences by result language and topic fit.
+        def sentence_score(sentence: str) -> tuple[int, int]:
+            terms = _normalized_terms(sentence)
+            signal_hits = len(terms & result_signals)
+            topic_hits = len(terms & query_terms)
+            return (signal_hits, topic_hits)
+
         labelled = [
             sentence for sentence in sentences
-            if re.search(r"\b(results?|findings?|conclusions?)\s*[—:-]", sentence, re.I)
+            if re.search(r"\\b(results?|findings?|conclusions?)\\s*[—:-]", sentence, re.I)
         ]
-        candidates = labelled or sentences
-        if query_terms:
-            matching = [
-                sentence for sentence in candidates
-                if len(query_terms & _normalized_terms(sentence)) >= 2
-            ]
-            candidates = matching
-            if not candidates:
-                continue
+        ranked = sorted(sentences, key=sentence_score, reverse=True)
+        candidates = labelled + [s for s in ranked if s not in labelled]
+        selected: list[str] = []
+        for sentence in candidates:
+            if sentence not in selected:
+                selected.append(sentence)
+            if len(selected) == 2:
+                break
 
-        excerpt = " ".join(candidates[:3]).strip()
-        if len(excerpt) > 900:
-            excerpt = excerpt[:897].rsplit(" ", 1)[0] + "..."
+        # Abstracts without a dedicated results sentence can still provide a
+        # short overview, but the UI labels it as abstract-based context.
+        summary = " ".join(selected).strip()
+        if len(summary) > 620:
+            summary = summary[:617].rsplit(" ", 1)[0] + "..."
+        if not summary:
+            continue
 
         source_url = str(study.locations[0].url) if study.locations else (
             f"https://doi.org/{study.doi}" if study.doi else ""
         )
         findings.append({
             "id": study.doi or source_url or study.title,
-            "title": "Abstract evidence",
-            "evidence_text": excerpt,
+            "title": "Abstract-based summary",
+            "summary": summary,
+            "evidence_text": summary,
             "source_title": study.title,
             "source_url": source_url,
             "publication_year": study.publication_year,
             "evidence_type": "supporting_research",
             "evidence_level": "abstract",
-            "interpretation": "Source passage, not an independently verified survey result or population estimate.",
+            "interpretation": "Summary of statements in the publication abstract. It is not an independently verified survey result or a population estimate.",
         })
 
     return findings
