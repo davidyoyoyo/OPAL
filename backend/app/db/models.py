@@ -12,7 +12,7 @@ from typing import Any
 
 from sqlalchemy import (
     BigInteger, Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index,
-    Integer, Numeric, SmallInteger, String, Text, UniqueConstraint, func,
+    Integer, Numeric, SmallInteger, String, Text, UniqueConstraint, func, text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -46,7 +46,7 @@ class ResearchWork(TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("identity_status IN ('verified', 'probable', 'unresolved')"),
         CheckConstraint("publication_year IS NULL OR publication_year BETWEEN 1400 AND 2200"),
-        Index("research_works_doi_unique", func.lower("doi"), unique=True, postgresql_where=("doi IS NOT NULL")),
+        Index("research_works_doi_unique", text("lower(doi)"), unique=True, postgresql_where=text("doi IS NOT NULL")),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     canonical_key: Mapped[str | None] = mapped_column(String, unique=True)
