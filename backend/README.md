@@ -96,9 +96,21 @@ All provider calls are made by the backend; API keys must never be placed in fro
 ### Crossref
 
 - No API key is required.
-- Current documented limits: public pool **5 requests/second, 1 concurrent request**; polite pool **10 requests/second, 3 concurrent requests**; Plus pool **150 requests/second** with no stated concurrency cap.
+- Crossref applies stricter limits to list/search requests than single-record lookups. OPAL deliberately sends one serialized list request at a time, no faster than once per second, caches successful results for 30 minutes and backs off on 429/5xx responses.
 - Almost all bibliographic metadata is reusable; abstracts may remain copyrighted by publishers/authors.
-- Set `OPAL_CROSSREF_MAILTO` to a real contact email to use the polite pool. No daily request quota is published in the current limit table.
+- Set `OPAL_CROSSREF_MAILTO` to a real monitored contact email to identify OPAL as a polite-pool client. OPAL remains conservative even when using that pool.
+
+### Bluesky
+
+- Public search is accessed without an API key through the documented public AppView endpoint.
+- OPAL performs one bounded, user-initiated search per question and does not crawl or bulk-download the network.
+- Public API availability and rate limits can change. A 403/429 is shown as a source failure rather than silently retried indefinitely.
+- The adapter does not retain author display names or profile metadata. It preserves the original post URL.
+- AI classifies relevance and stance; Python validates returned post IDs and calculates descriptive proportions within the retrieved sample. Those proportions are not representative of all people or all Bluesky users.
+
+### AI processing
+
+Set `OPAL_AI_PROVIDER=cloudflare_workers_ai`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, and `OPAL_AI_MODEL` in the backend process environment. AI creates the research plan and classifies bounded discussion batches. Python validates IDs and performs sample arithmetic. If AI is not configured, OPAL still retrieves posts but does not invent stance labels or percentages.
 
 ### Not enabled
 
