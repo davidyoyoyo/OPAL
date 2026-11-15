@@ -30,7 +30,7 @@ class AIInterpretationService:
     async def interpret_discussions(
         self, question: str, records: list[dict]
     ) -> DiscussionBatchInterpretation:
-        bounded_records = records[:50]
+        bounded_records = records[:25]
         system, user = discussion_batch_prompt(question, bounded_records, DiscussionBatchInterpretation)
         return await self.provider.generate_structured(
             system_prompt=system,
