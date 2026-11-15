@@ -184,8 +184,10 @@ async def research(request: ResearchRequest) -> dict:
         "message": (
             "No question-level survey repository is currently connected. Crossref provides scholarly "
             "publication metadata and Eurostat currently discovers statistical datasets; neither "
-            "connector supplies original public-opinion question distributions here. OPAL therefore "
-            "shows no measured-opinion percentages for this search."
+            "connector supplies original public-opinion question distributions here. Eurobarometer's "
+            "published aggregate XLSX files are the leading candidate, but their dataset licences and "
+            "question-level workbook fields are still being validated. OPAL therefore shows no "
+            "measured-opinion percentages for this search."
             if survey_search["status"] == "not_connected"
             else (
                 "Connected survey sources were searched, but none returned a matching question-level "
