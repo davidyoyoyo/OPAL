@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections import Counter
 
 from fastapi import FastAPI, HTTPException
@@ -21,6 +22,8 @@ from app.sources.providers.bluesky import BlueskyAdapter
 from app.ai.schemas import AIInterpretationError
 from app.ai.service import create_ai_service_from_env
 
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title=settings.app_name, version=settings.api_version)
 app.add_middleware(
@@ -285,7 +288,8 @@ async def interpret_question(request: ResearchRequest) -> dict:
         result = await service.interpret_question(request.question.strip())
         return result.model_dump()
     except AIInterpretationError as exc:
-        raise HTTPException(status_code=502, detail="The AI provider could not interpret the question.") from exc
+        logger.error("AI question interpretation failed: %s", exc)
+        raise HTTPException(status_code=502, detail="The AI provider could not interpret the question. Check the backend terminal for the provider error.") from exc
 
 
 @app.post("/ai/interpret-evidence")
