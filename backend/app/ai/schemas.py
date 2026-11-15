@@ -69,7 +69,7 @@ class DiscussionBatchInterpretation(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    interpretations: list[DiscussionLabel] = Field(max_length=50)
+    interpretations: list[DiscussionLabel] = Field(max_length=25)
 
 
 class AIInterpretationError(RuntimeError):
