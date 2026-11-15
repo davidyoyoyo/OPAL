@@ -112,12 +112,12 @@ def _analyse_discussions(question: str, records: list[dict], batch) -> tuple[lis
         {
             "stance": stance,
             "count": count,
-            "percentage": round(count / denominator * 100, 1) if denominator else None,
+            "percentage": round(count / denominator * 100, 1) if denominator >= 10 else None,
         }
         for stance, count in sorted(counts.items())
     ]
     return enriched, {
-        "status": "completed",
+        "status": "completed" if denominator >= 10 else "insufficient_sample",
         "sampled_posts": len(records),
         "relevant_posts": len(relevant_labels),
         "classified_posts": denominator,
@@ -126,6 +126,7 @@ def _analyse_discussions(question: str, records: list[dict], batch) -> tuple[lis
             "Percentages describe only the retrieved, relevant and classifiable public posts in this "
             "Bluesky search sample. They are not a representative estimate of the general population. "
             "The sample is shaped by platform use, search ranking, language, time and who chooses to post."
+            + (" Fewer than 10 classifiable posts were available, so OPAL shows counts only and suppresses percentages." if denominator < 10 else "")
         ),
     }
 
