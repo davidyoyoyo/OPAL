@@ -2,7 +2,6 @@ import asyncio
 import re
 import time
 from datetime import datetime
-from urllib.parse import quote
 
 import httpx
 
