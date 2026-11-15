@@ -23,7 +23,7 @@ Question
 
 ## Connector boundary
 
-Each adapter implements the same `SourceAdapter.search(SourceQuery)` contract and returns `RawSourceItem` objects. A provider-specific API change should be isolated to that adapter. Credentials are configured per provider through environment variables; never commit API keys.
+Scholarly adapters implement `SourceAdapter.search(SourceQuery)` and return `RawSourceItem` objects. Survey adapters implement `SurveySourceAdapter` and return validated `SurveyQuestionResult` objects. Discussion adapters implement `DiscussionSourceAdapter` and return `DiscussionRecord` objects. These separate contracts prevent comments from being mistaken for studies or surveys. A provider-specific API change should be isolated to its adapter. Credentials are configured per provider through environment variables; never commit API keys.
 
 ## Three distinct entities
 
@@ -52,7 +52,7 @@ A repeated study is not a repeated independent observation. If two providers mir
 
 ## Planned modules
 
-- `sources/providers/`: one adapter per provider.
+- `sources/providers/`: one adapter per scholarly or discussion provider.\n- `sources/survey_providers/`: one adapter per survey archive.
 - `deduplication/`: exact identifiers and candidate matching.
 - `extraction/`: structured extraction of survey results and opinion themes.
 - `quality/`: sample, date, geography, method, duplicate and representativeness checks.
