@@ -6,7 +6,7 @@ OPAL is an account-free opinion research platform. A visitor asks a question, OP
 
 ## Current stage
 
-The frontend is connected to the Python research API. Scholarly discovery currently uses Crossref; the Eurostat connector discovers statistical datasets but does not yet retrieve opinion-survey distributions. OPAL therefore does not display measured public-opinion percentages yet. A separate survey-source registry and strict question-level survey schema are now in place, but no survey repository is registered until its access and reuse terms are suitable.
+The frontend is connected to the Python research API. Scholarly discovery uses Crossref, official-statistics discovery uses Eurostat, and public discussion search uses Bluesky's public search endpoint. A separate survey-source registry and strict question-level survey schema are in place, but no compatible survey repository is registered yet; measured public-opinion percentages therefore remain unavailable until the Eurobarometer aggregate files are validated and integrated.
 
 ## Technology
 
@@ -50,7 +50,7 @@ The website calls the local API by default. To use another API URL, copy `.env.e
 
 ## Adding a source
 
-Scholarly providers get adapters under `backend/app/sources/providers/` and implement `SourceAdapter`. Survey repositories use a separate `SurveySourceAdapter` contract and `SurveySourceRegistry`, returning validated `SurveyQuestionResult` records. This keeps bibliographic discovery separate from measured opinion data.
+Scholarly providers get adapters under `backend/app/sources/providers/` and implement `SourceAdapter`. Survey repositories use a separate `SurveySourceAdapter` contract and `SurveySourceRegistry`, returning validated `SurveyQuestionResult` records. Public discussion platforms use `DiscussionSourceAdapter` and `DiscussionSourceRegistry`; they return individual public posts and are never merged with survey results. This keeps bibliographic discovery, measured opinions and expressed online opinions separate.
 
 See [the engine guide](backend/README.md) and [the architecture notes](docs/ENGINE_ARCHITECTURE.md).
 
@@ -62,7 +62,7 @@ A study is the underlying research work; a source location is a website record t
 
 - No accounts or registration.
 - A question-first workflow.
-- Survey measurements, expressed online opinions and supporting research remain distinct.
+- Survey measurements, expressed online opinions and supporting research remain distinct. Bluesky discussion results are a non-representative platform sample, never a population estimate.
 - Every result should be traceable to its sources.
 - Statistical calculations are performed by code, not guessed by an LLM.
 - Users can export their results and leave.
