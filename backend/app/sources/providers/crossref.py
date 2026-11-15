@@ -76,20 +76,13 @@ class CrossrefAdapter(SourceAdapter):
 
     async def search(self, request: SourceQuery) -> list[RawSourceItem]:
         topic_query = self.build_topic_query(request.query)
-        cache_key = topic_query.casefold()
+        cache_key = f"{topic_query.casefold()}|{min(request.limit, 100)}"
         now = time.monotonic()
         cached = self._cache.get(cache_key)
         if cached and now - cached[0] < self.cache_ttl:
             return list(cached[1])
 
-        headers = {
-            "User-Agent": (
-                "OPALResearch/0.4 "
-                "(scholarly metadata discovery; mailto:"
-                + os.getenv("OPAL_CROSSREF_MAILTO", "contact-not-configured")
-                + ")"
-            )
-        }
+        headers = {"User-Agent": "OPALResearch/0.4 (scholarly metadata discovery)"}
         params = {
             "query.bibliographic": topic_query,
             "rows": min(request.limit, 100),
