@@ -230,7 +230,7 @@ async def research(request: ResearchRequest) -> dict:
         try:
             batch = await ai_service.interpret_discussions(
                 question,
-                [{"id": item["id"], "text": item["text"][:1200]} for item in discussion_records[:50]],
+                [{"id": item["id"], "text": item["text"][:600]} for item in discussion_records[:25]],
             )
             enriched, analysis = _analyse_discussions(question, discussion_records, batch)
             result["discussion_results"] = enriched
