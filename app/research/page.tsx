@@ -35,6 +35,22 @@ type SurveyResult = {
   responses: { label: string; count: number | null; percentage: number | null }[];
 };
 
+type DiscussionResult = {
+  id: string;
+  platform: string;
+  title: string;
+  text: string;
+  source_url: string;
+  published_at: string | null;
+  like_count: number | null;
+  reply_count: number | null;
+  repost_count: number | null;
+  relevant?: boolean | null;
+  stance?: "support" | "oppose" | "neutral" | "mixed" | "unclear";
+  analysis_summary?: string;
+  analysis_confidence?: number | null;
+};
+
 type ResearchResult = {
   status: string;
   query: string;
@@ -43,13 +59,22 @@ type ResearchResult = {
   duplicate_candidates: DuplicateCandidate[];
   sources_searched: string[];
   source_failures?: { source: string; error: string }[];
-  survey_source_failures?: { source: string; error: string }[];
+  survey_source_failures?: { source: string; error: string }[];\n  discussion_source_failures?: { source: string; error: string }[];
   raw_records_found?: number;
   unique_studies?: number;
   candidate_records_screened?: number;
   relevant_source_records?: number;
   findings?: { id: string; title: string; summary?: string; evidence_text: string; source_title: string; source_url: string; publication_year: number | null; evidence_type: string; evidence_level: string; evidence_role?: string; interpretation: string }[];
   survey_results?: SurveyResult[];
+  discussion_results?: DiscussionResult[];
+  discussion_analysis?: {
+    status: string;
+    sampled_posts: number;
+    relevant_posts: number;
+    classified_posts: number;
+    stance_distribution: { stance: string; count: number; percentage: number | null }[];
+    note: string;
+  };
   abstracts_with_evidence?: number;
   evidence_synthesis?: {
     mode: "ai_synthesis" | "extractive_fallback";
@@ -220,6 +245,75 @@ export default function ResearchPage() {
                       : "No matching measured-opinion results were returned."}
                   </strong>
                   <p>{result.survey_data_status?.message ?? "This search returned no original survey question and response distribution. OPAL will not manufacture percentages from scholarly abstracts."}</p>
+                </div>
+              )}
+            </section>
+
+            <section className="discussion-data-section">
+              <div className="findings-heading">
+                <div>
+                  <div className="live-kicker">EXPRESSED ONLINE OPINIONS</div>
+                  <h3>Public discussions</h3>
+                </div>
+                <span className="findings-count">{result.discussion_results?.length ?? 0} posts</span>
+              </div>
+              <p className="findings-intro">
+                Posts retrieved from Bluesky are a sample of public online expression. They are not a poll,
+                and the people posting are not representative of the general population.
+              </p>
+              {result.discussion_results && result.discussion_results.length > 0 ? (
+                <>
+                  {result.discussion_analysis?.stance_distribution?.length ? (
+                    <div className="discussion-analysis">
+                      <div className="discussion-analysis-title">
+                        **AI-classified stance in this sample**
+                        <span>{result.discussion_analysis.classified_posts} relevant posts classified</span>
+                      </div>
+                      {result.discussion_analysis.stance_distribution.map((item) => (
+                        <div className="discussion-bar-row" key={item.stance}>
+                          <div><span>{item.stance.replace("_", " ")}</span><strong>{item.percentage?.toFixed(1) ?? "—"}%</strong></div>
+                          <div className="survey-bar-track"><span style={{ width: `${Math.max(0, Math.min(100, item.percentage ?? 0))}%` }} /></div>
+                          <small>{item.count} posts</small>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="findings-empty">
+                      <strong>
+                        {result.discussion_analysis?.status === "not_configured"
+                          ? "AI classification is not configured."
+                          : "No classifiable stance distribution was produced."}
+                      </strong>
+                      <p>{result.discussion_analysis?.note ?? "The retrieved posts are shown without assigning opinions."}</p>
+                    </div>
+                  )}
+                  <div className="discussion-post-list">
+                    {result.discussion_results.slice(0, 10).map((post) => (
+                      <article className="discussion-post" key={post.id}>
+                        <div className="discussion-post-meta">
+                          <span>{post.platform}</span>
+                          {post.published_at && <time>{new Date(post.published_at).toLocaleDateString()}</time>}
+                          {post.stance && post.stance !== "unclear" && <strong>{post.stance.replace("_", " ")}</strong>}
+                        </div>
+                        <p>{post.text}</p>
+                        {post.analysis_summary && <small>{post.analysis_summary}</small>}
+                        <a href={post.source_url} target="_blank" rel="noreferrer">Open original post <ExternalLink size={12} /></a>
+                      </article>
+                    ))}
+                  </div>
+                  <p className="discussion-limitation">{result.discussion_analysis?.note}</p>
+                </>
+              ) : (
+                <div className="findings-empty">
+                  <strong>
+                    {(result.discussion_source_failures ?? []).length > 0
+                      ? "The discussion source could not be searched."
+                      : "No matching public posts were returned."}
+                  </strong>
+                  <p>
+                    A missing result does not mean nobody has that opinion. Public discussion search depends
+                    on the platform's index, language, visibility and current availability.
+                  </p>
                 </div>
               )}
             </section>
@@ -411,9 +505,9 @@ export default function ResearchPage() {
               </section>
             )}
 
-            {((result.source_failures ?? []).concat(result.survey_source_failures ?? [])).length > 0 && (
+            {((result.source_failures ?? []).concat(result.survey_source_failures ?? [], result.discussion_source_failures ?? [])).length > 0 && (
               <div className="source-failures">
-                {(result.source_failures ?? []).concat(result.survey_source_failures ?? []).map((failure, index) => (
+                {(result.source_failures ?? []).concat(result.survey_source_failures ?? [], result.discussion_source_failures ?? []).map((failure, index) => (
                   <p key={`${failure.source}-${index}`}>{failure.source}: {failure.error}</p>
                 ))}
               </div>
@@ -425,11 +519,11 @@ export default function ResearchPage() {
           <div className="workspace-start">
             <BookOpen size={20} />
             <h2>Start with a topic.</h2>
-            <p>Try a research question above. OPAL currently searches scholarly publication metadata; survey databases and discussion platforms will be added as separate connectors.</p>
+            <p>Try a research question above. OPAL searches scholarly metadata and public Bluesky discussions. Question-level survey repositories are still being connected.</p>
           </div>
         )}
 
-        <footer className="live-footer">OPAL · Early research engine · Search results are publication metadata, not yet validated opinion findings.</footer>
+        <footer className="live-footer">OPAL · Research workspace · Survey measurements, public discussions and scholarly research are separate evidence types.</footer>
       </section>
     </main>
   );
