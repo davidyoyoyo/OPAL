@@ -1,3 +1,6 @@
+import asyncio
+from collections import Counter
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -6,11 +9,15 @@ from app.core.config import settings
 from app.services.research import is_prevalence_question, run_research
 from app.services.synthesis import build_extractive_synthesis
 from app.services.survey_research import run_survey_search
+from app.services.discussion_research import run_discussion_search
 from app.sources.survey_base import SurveyQuery
 from app.sources.survey_registry import survey_registry
+from app.sources.discussion_base import DiscussionQuery
+from app.sources.discussion_registry import discussion_registry
 from app.sources.registry import source_registry
 from app.sources.providers.crossref import CrossrefAdapter
 from app.sources.providers.eurostat import EurostatAdapter
+from app.sources.providers.bluesky import BlueskyAdapter
 from app.ai.schemas import AIInterpretationError
 from app.ai.service import create_ai_service_from_env
 
@@ -24,10 +31,10 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
-# Providers are registered here; the orchestration pipeline does not depend on
-# any provider-specific implementation.
+# Each evidence family has its own registry and validation rules.
 source_registry.register(CrossrefAdapter())
 source_registry.register(EurostatAdapter())
+discussion_registry.register(BlueskyAdapter())
 
 
 class ResearchRequest(BaseModel):
@@ -71,6 +78,58 @@ def _validated_synthesis(ai_synthesis, source_passages: list[dict]) -> dict:
     output["mode"] = "ai_synthesis"
     return output
 
+
+def _analyse_discussions(question: str, records: list[dict], batch) -> tuple[list[dict], dict]:
+    """Validate AI labels and calculate descriptive sample statistics in Python."""
+    valid_ids = {str(item.get("id", "")) for item in records}
+    labels = {}
+    for label in batch.interpretations:
+        if label.id in valid_ids and label.id not in labels:
+            labels[label.id] = label
+
+    enriched = []
+    for record in records:
+        label = labels.get(str(record.get("id", "")))
+        enriched.append({
+            **record,
+            "relevant": label.relevant if label else None,
+            "stance": label.stance if label else "unclear",
+            "analysis_summary": label.summary if label else "",
+            "analysis_confidence": label.confidence if label else None,
+        })
+
+    relevant_labels = [
+        label for label in labels.values()
+        if label.relevant and label.confidence >= 0.55
+    ]
+    classifiable = [
+        label for label in relevant_labels
+        if label.stance != "unclear"
+    ]
+    counts = Counter(label.stance for label in classifiable)
+    denominator = len(classifiable)
+    distribution = [
+        {
+            "stance": stance,
+            "count": count,
+            "percentage": round(count / denominator * 100, 1) if denominator else None,
+        }
+        for stance, count in sorted(counts.items())
+    ]
+    return enriched, {
+        "status": "completed",
+        "sampled_posts": len(records),
+        "relevant_posts": len(relevant_labels),
+        "classified_posts": denominator,
+        "stance_distribution": distribution,
+        "note": (
+            "Percentages describe only the retrieved, relevant and classifiable public posts in this "
+            "Bluesky search sample. They are not a representative estimate of the general population. "
+            "The sample is shaped by platform use, search ranking, language, time and who chooses to post."
+        ),
+    }
+
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "service": settings.app_name}
@@ -81,6 +140,7 @@ async def list_sources() -> dict:
     return {
         "scholarly_sources": source_registry.public_catalog(),
         "survey_sources": survey_registry.public_catalog(),
+        "discussion_sources": discussion_registry.public_catalog(),
     }
 
 
@@ -90,28 +150,42 @@ async def research(request: ResearchRequest) -> dict:
     if not question:
         raise HTTPException(status_code=422, detail="Question cannot be empty.")
 
-    # The original question remains the retrieval query. AI may interpret and
-    # synthesize retrieved evidence, but cannot silently redirect source search.
-    result = await run_research(question, source_registry)
-    findings = result.get("findings", [])
+    # Interpret the question first. The concise topic guides provider retrieval,
+    # while relevance checks and all evidence claims retain the original wording.
+    ai_service = None
+    plan = None
+    ai_configuration_status = "not_configured"
+    try:
+        ai_service = create_ai_service_from_env()
+        if ai_service is not None:
+            ai_configuration_status = "configured"
+            plan = await ai_service.interpret_question(question)
+    except Exception:
+        ai_configuration_status = "partial_failure"
 
-    # Always return a useful, clearly labelled fallback brief. When configured,
-    # one structured AI call replaces it with a true cross-study synthesis.
-    result["evidence_synthesis"] = build_extractive_synthesis(question, findings)
-    survey_search = await run_survey_search(
-        SurveyQuery(question=question),
-        survey_registry,
+    retrieval_topic = plan.topic if plan is not None else question
+    research_result, survey_search, discussion_search = await asyncio.gather(
+        run_research(question, source_registry, search_query=retrieval_topic),
+        run_survey_search(SurveyQuery(question=question), survey_registry),
+        run_discussion_search(
+            DiscussionQuery(question=question, topic=retrieval_topic),
+            discussion_registry,
+        ),
     )
+    result = research_result
+    findings = result.get("findings", [])
+    result["evidence_synthesis"] = build_extractive_synthesis(question, findings)
+
     result["survey_results"] = survey_search["results"]
     result["survey_source_failures"] = survey_search["source_failures"]
     result["survey_data_status"] = {
         "status": survey_search["status"],
         "sources_searched": survey_search["sources_searched"],
         "message": (
-            "No survey repository is currently connected to OPAL. Crossref provides scholarly "
-            "publication metadata and the current Eurostat connector discovers statistical datasets; "
-            "neither supplies question-level opinion response distributions here. OPAL therefore "
-            "shows no survey counts or percentages for this search."
+            "No question-level survey repository is currently connected. Crossref provides scholarly "
+            "publication metadata and Eurostat currently discovers statistical datasets; neither "
+            "connector supplies original public-opinion question distributions here. OPAL therefore "
+            "shows no measured-opinion percentages for this search."
             if survey_search["status"] == "not_connected"
             else (
                 "Connected survey sources were searched, but none returned a matching question-level "
@@ -121,50 +195,82 @@ async def research(request: ResearchRequest) -> dict:
             )
         ),
     }
-    result["ai_processing"] = {"status": "not_configured"}
 
-    try:
-        ai_service = create_ai_service_from_env()
-    except ValueError:
-        result["ai_processing"] = {"status": "configuration_error"}
-        return result
+    result["discussion_results"] = discussion_search["results"]
+    result["discussion_sources_searched"] = discussion_search["sources_searched"]
+    result["discussion_source_failures"] = discussion_search["source_failures"]
+    result["discussion_analysis"] = {
+        "status": "not_configured" if ai_service is None else "not_attempted",
+        "sampled_posts": len(discussion_search["results"]),
+        "relevant_posts": 0,
+        "classified_posts": 0,
+        "stance_distribution": [],
+        "note": (
+            "Public posts are expressions from a platform sample, not a population survey. "
+            "Configure OPAL's AI provider to classify relevance and stance; no percentages are inferred."
+        ),
+    }
+
+    if plan is not None:
+        result["research_plan"] = plan.model_dump()
+
+    result["ai_processing"] = {
+        "status": ai_configuration_status,
+        "question_interpretation": "completed" if plan is not None else "unavailable",
+        "synthesis": "not_attempted",
+        "discussion_analysis": "not_attempted",
+    }
 
     if ai_service is None:
+        result["ai_processing"]["discussion_analysis"] = "not_configured"
         return result
 
-    try:
-        plan = await ai_service.interpret_question(question)
-        result["research_plan"] = plan.model_dump()
-        result["ai_processing"] = {"status": "question_interpreted", "synthesis": "not_attempted"}
+    discussion_records = discussion_search["results"]
+    if discussion_records:
+        try:
+            batch = await ai_service.interpret_discussions(
+                question,
+                [{"id": item["id"], "text": item["text"][:1200]} for item in discussion_records[:50]],
+            )
+            enriched, analysis = _analyse_discussions(question, discussion_records, batch)
+            result["discussion_results"] = enriched
+            result["discussion_analysis"] = analysis
+            result["ai_processing"]["discussion_analysis"] = "completed"
+        except Exception:
+            result["discussion_analysis"]["status"] = "partial_failure"
+            result["discussion_analysis"]["note"] += " AI classification failed for this request."
+            result["ai_processing"]["discussion_analysis"] = "partial_failure"
+    else:
+        result["discussion_analysis"]["status"] = "no_results"
+        result["ai_processing"]["discussion_analysis"] = "no_posts_to_classify"
 
-        synthesis_findings = (
-            [item for item in findings if item.get("evidence_role") == "explanatory_context"]
-            if is_prevalence_question(question) else findings
-        )
-        if synthesis_findings:
-            source_passages = [
-                {
-                    "source_id": str(item.get("id") or item.get("source_url") or item.get("source_title") or ""),
-                    "source_title": item.get("source_title"),
-                    "source_url": item.get("source_url"),
-                    "publication_year": item.get("publication_year"),
-                    "passage": str(item.get("evidence_text") or item.get("summary") or "")[:2500],
-                    "evidence_level": item.get("evidence_level"),
-                    "evidence_role": item.get("evidence_role"),
-                }
-                for item in synthesis_findings[:20]
-            ]
+    synthesis_findings = (
+        [item for item in findings if item.get("evidence_role") == "explanatory_context"]
+        if is_prevalence_question(question) else findings
+    )
+    if synthesis_findings:
+        source_passages = [
+            {
+                "source_id": str(item.get("id") or item.get("source_url") or item.get("source_title") or ""),
+                "source_title": item.get("source_title"),
+                "source_url": item.get("source_url"),
+                "publication_year": item.get("publication_year"),
+                "passage": str(item.get("evidence_text") or item.get("summary") or "")[:2500],
+                "evidence_level": item.get("evidence_level"),
+                "evidence_role": item.get("evidence_role"),
+            }
+            for item in synthesis_findings[:20]
+        ]
+        try:
             synthesis = await ai_service.synthesize_evidence(question, source_passages)
             result["evidence_synthesis"] = _validated_synthesis(synthesis, source_passages)
             result["ai_processing"]["synthesis"] = "completed"
-        elif findings and is_prevalence_question(question):
-            result["ai_processing"]["synthesis"] = "no_explanatory_studies"
-        else:
-            result["ai_processing"]["synthesis"] = "no_abstracts_to_synthesize"
-    except AIInterpretationError:
-        # Retrieved records and the deterministic fallback remain available if
-        # the optional AI provider fails or returns invalid structured output.
-        result["ai_processing"]["status"] = "partial_failure"
+        except Exception:
+            result["ai_processing"]["synthesis"] = "partial_failure"
+    elif findings and is_prevalence_question(question):
+        result["ai_processing"]["synthesis"] = "no_explanatory_studies"
+    else:
+        result["ai_processing"]["synthesis"] = "no_abstracts_to_synthesize"
 
     return result
 
