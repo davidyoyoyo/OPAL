@@ -1,3 +1,4 @@
+import asyncio
 import re
 import time
 from datetime import datetime
@@ -55,7 +56,8 @@ class BlueskyAdapter:
 
             # at://did:plc:.../app.bsky.feed.post/rkey
             rkey = uri.rsplit("/", 1)[-1]
-            handle = str((post.get("author") or {}).get("handle") or "")
+            author = post.get("author") or {}
+            handle = str(author.get("handle") or author.get("did") or "")
             if not handle or not rkey:
                 continue
             try:
@@ -84,16 +86,30 @@ class BlueskyAdapter:
         cached = self._cache.get(cache_key)
         now = time.monotonic()
         if cached and now - cached[0] < self.cache_ttl:
-            return list(cached[1])
+            return list(cached[1][:query.limit])
 
         headers = {"User-Agent": "OPALResearch/0.4 (user-initiated public discussion search)"}
         async with httpx.AsyncClient(timeout=self.timeout_seconds, headers=headers) as client:
-            response = await client.get(
-                self.endpoint,
-                params={"q": search_text, "limit": min(query.limit, 100), "sort": "top"},
-            )
-            response.raise_for_status()
-            payload = response.json()
+            for attempt in range(4):
+                response = await client.get(
+                    self.endpoint,
+                    params={"q": search_text, "limit": min(query.limit, 100), "sort": "top"},
+                )
+                if response.status_code == 429 or response.status_code in {500, 502, 503, 504}:
+                    if attempt == 3:
+                        response.raise_for_status()
+                    retry_after = response.headers.get("Retry-After")
+                    try:
+                        delay = min(30.0, max(0.0, float(retry_after))) if retry_after else 1.0 * (2 ** attempt)
+                    except ValueError:
+                        delay = 1.0 * (2 ** attempt)
+                    await asyncio.sleep(delay)
+                    continue
+                response.raise_for_status()
+                payload = response.json()
+                break
+            else:
+                return []
 
         records = self.parse_posts(payload, query.limit)
         self._cache[cache_key] = (time.monotonic(), records)
