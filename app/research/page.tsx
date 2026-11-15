@@ -266,7 +266,7 @@ export default function ResearchPage() {
                   {result.discussion_analysis?.stance_distribution?.length ? (
                     <div className="discussion-analysis">
                       <div className="discussion-analysis-title">
-                        **AI-classified stance in this sample**
+                        <strong>AI-classified stance in this sample</strong>
                         <span>{result.discussion_analysis.classified_posts} relevant posts classified</span>
                       </div>
                       {result.discussion_analysis.stance_distribution.map((item) => (
