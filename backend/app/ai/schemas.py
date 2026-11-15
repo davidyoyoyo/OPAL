@@ -52,5 +52,25 @@ class EvidenceInterpretation(BaseModel):
     confidence: float = Field(ge=0, le=1)
 
 
+class DiscussionLabel(BaseModel):
+    """One AI interpretation of a public discussion post."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1, max_length=500)
+    relevant: bool
+    stance: Literal["support", "oppose", "neutral", "mixed", "unclear"]
+    summary: str = Field(default="", max_length=240)
+    confidence: float = Field(ge=0, le=1)
+
+
+class DiscussionBatchInterpretation(BaseModel):
+    """Bounded batch response; Python validates IDs and calculates sample counts."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    interpretations: list[DiscussionLabel] = Field(max_length=50)
+
+
 class AIInterpretationError(RuntimeError):
     """Raised when AI is unavailable or returns invalid structured output."""
