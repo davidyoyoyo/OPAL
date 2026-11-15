@@ -47,5 +47,19 @@ class CloudflareWorkersAIProvider(StructuredAIProvider):
             if not isinstance(content, str) or not content.strip():
                 raise ValueError("The model returned an empty response.")
             return output_model.model_validate_json(content)
+        except httpx.HTTPStatusError as exc:
+            # Preserve provider diagnostics without logging request headers or credentials.
+            try:
+                error_body = exc.response.json()
+                errors = error_body.get("errors", []) if isinstance(error_body, dict) else []
+                detail = "; ".join(
+                    str(item.get("message", "")) for item in errors if isinstance(item, dict)
+                )
+            except ValueError:
+                detail = exc.response.text[:1000]
+            detail = detail or exc.response.reason_phrase or "No error details supplied."
+            raise AIInterpretationError(
+                f"Cloudflare Workers AI returned HTTP {exc.response.status_code}: {detail}"
+            ) from exc
         except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
             raise AIInterpretationError(f"Cloudflare Workers AI interpretation failed: {exc}") from exc
