@@ -58,8 +58,10 @@ type ResearchResult = {
   studies: Study[];
   duplicate_candidates: DuplicateCandidate[];
   sources_searched: string[];
+  discussion_sources_searched?: string[];
   source_failures?: { source: string; error: string }[];
-  survey_source_failures?: { source: string; error: string }[];\n  discussion_source_failures?: { source: string; error: string }[];
+  survey_source_failures?: { source: string; error: string }[];
+  discussion_source_failures?: { source: string; error: string }[];
   raw_records_found?: number;
   unique_studies?: number;
   candidate_records_screened?: number;
@@ -182,7 +184,7 @@ export default function ResearchPage() {
           <div className="live-state">
             <div className="loading-line" />
             <strong>Searching connected sources</strong>
-            <p>Retrieving publication metadata and checking study identifiers.</p>
+            <p>Searching scholarly records and public discussions, then checking source relevance and study identifiers.</p>
           </div>
         )}
 
@@ -202,7 +204,7 @@ export default function ResearchPage() {
                 <h2>{result.unique_studies ?? result.studies.length} relevant studies</h2>
                 <p>{result.unique_studies ?? result.studies.length} relevant studies retained from {result.candidate_records_screened ?? result.raw_records_found ?? result.studies.length} records screened for “{result.query}”.</p>
               </div>
-              <div className="source-count"><Database size={15} /> {result.sources_searched.length} source connector{result.sources_searched.length === 1 ? "" : "s"}</div>
+              <div className="source-count"><Database size={15} /> {result.sources_searched.length + (result.discussion_sources_searched?.length ?? 0)} source connector{result.sources_searched.length + (result.discussion_sources_searched?.length ?? 0) === 1 ? "" : "s"}</div>
             </div>
 
             <section className="survey-data-section">
