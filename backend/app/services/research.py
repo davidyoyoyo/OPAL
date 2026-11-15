@@ -322,7 +322,7 @@ def find_duplicate_candidates(items: list[RawSourceItem]) -> list[dict]:
     return candidates
 
 
-async def run_research(query: str, registry: SourceRegistry) -> dict:
+async def run_research(query: str, registry: SourceRegistry, *, search_query: str | None = None) -> dict:
     adapters = registry.get_all()
     if not adapters:
         return {
@@ -336,7 +336,7 @@ async def run_research(query: str, registry: SourceRegistry) -> dict:
             "sources_searched": [],
         }
 
-    request = SourceQuery(query=query, limit=100)
+    # AI may provide a concise topic for provider retrieval; deterministic\n    # relevance screening always uses the user's original question below.\n    request = SourceQuery(query=(search_query or query), limit=100)
     results = await asyncio.gather(
         *(adapter.search(request) for adapter in adapters),
         return_exceptions=True,
