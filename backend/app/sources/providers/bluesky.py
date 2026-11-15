@@ -88,27 +88,39 @@ class BlueskyAdapter:
             return list(cached[1][:query.limit])
 
         headers = {"User-Agent": "OPALResearch/0.4 (user-initiated public discussion search)"}
+        payload = None
+        # The public AppView has intermittently returned 403 for the documented
+        # camelCase route while the lowercase route remained available. Try the
+        # documented route first, then the observed lowercase compatibility path.
+        endpoints = (self.endpoint, self.endpoint.replace("searchPosts", "searchposts"))
         async with httpx.AsyncClient(timeout=self.timeout_seconds, headers=headers) as client:
-            for attempt in range(4):
-                response = await client.get(
-                    self.endpoint,
-                    params={"q": search_text, "limit": min(query.limit, 100), "sort": "top"},
-                )
-                if response.status_code == 429 or response.status_code in {500, 502, 503, 504}:
-                    if attempt == 3:
-                        response.raise_for_status()
-                    retry_after = response.headers.get("Retry-After")
-                    try:
-                        delay = min(30.0, max(0.0, float(retry_after))) if retry_after else 1.0 * (2 ** attempt)
-                    except ValueError:
-                        delay = 1.0 * (2 ** attempt)
-                    await asyncio.sleep(delay)
-                    continue
-                response.raise_for_status()
-                payload = response.json()
-                break
-            else:
-                return []
+            for endpoint_index, endpoint in enumerate(endpoints):
+                for attempt in range(4):
+                    response = await client.get(
+                        endpoint,
+                        params={"q": search_text, "limit": min(query.limit, 100), "sort": "top"},
+                    )
+                    if response.status_code == 403 and endpoint_index == 0:
+                        # Try the alternate route before reporting a provider failure.
+                        break
+                    if response.status_code == 429 or response.status_code in {500, 502, 503, 504}:
+                        if attempt == 3:
+                            response.raise_for_status()
+                        retry_after = response.headers.get("Retry-After")
+                        try:
+                            delay = min(30.0, max(0.0, float(retry_after))) if retry_after else 1.0 * (2 ** attempt)
+                        except ValueError:
+                            delay = 1.0 * (2 ** attempt)
+                        await asyncio.sleep(delay)
+                        continue
+                    response.raise_for_status()
+                    payload = response.json()
+                    break
+                if payload is not None:
+                    break
+
+        if payload is None:
+            response.raise_for_status()
 
         records = self.parse_posts(payload, query.limit)
         self._cache[cache_key] = (time.monotonic(), records)
