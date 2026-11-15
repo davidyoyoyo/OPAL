@@ -337,7 +337,8 @@ async def run_research(query: str, registry: SourceRegistry, *, search_query: st
         }
 
     # AI may provide a concise topic for provider retrieval; deterministic
-    # relevance screening always uses the user's original question below.\n    request = SourceQuery(query=(search_query or query), limit=100)
+    # relevance screening always uses the user's original question below.
+    request = SourceQuery(query=(search_query or query), limit=100)
     results = await asyncio.gather(
         *(adapter.search(request) for adapter in adapters),
         return_exceptions=True,
