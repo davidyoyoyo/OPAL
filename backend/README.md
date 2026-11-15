@@ -33,13 +33,15 @@ This prevents the same paper mirrored across several websites from being counted
 
 ## Current scope
 
-The engine currently registers two discovery connectors:
+The engine has three separate evidence families:
 
-- **Crossref** — scholarly metadata. Abstracts can be copyrighted even though most bibliographic metadata is reusable.
-- **Eurostat** — official dataset catalogue discovery. Returned records are dataset descriptions, not extracted statistical values. Eurostat is a supporting-statistics source, not a general public-opinion poll provider.
+- **Scholarly sources:** Crossref provides publication metadata. Its search calls are serialized, cached for 30 minutes and retried with backoff after 429/5xx responses.
+- **Official statistics:** Eurostat discovers statistical datasets. The current connector does not extract question-level opinion results.
+- **Public discussions:** Bluesky searches a bounded set of public posts for the user's topic. This is expressed online opinion, not a representative survey.
 
-These connectors discover sources. They do not yet extract question-level survey distributions or calculate population opinion estimates. The survey-results array therefore remains empty until a source provides validated question-level data.
+No question-level survey adapter is registered yet. The measured-opinions section therefore remains empty rather than inventing percentages. Eurobarometer aggregate XLSX files are the leading candidate, but each dataset's licence and workbook structure must be validated before integration.
 
+Adding a provider in one evidence family must not cause its records to be treated as records in another family. Survey measurements, discussion posts and scholarly studies have separate schemas and registries.
 
 ## Database setup
 
